@@ -238,6 +238,37 @@ function getType(type, context) {
 	}
 	return defaultType;
 }
+// Transforms and sanitizes descriptions
+function getComments(entry) {
+	// Make sure the description doesn't break out of the comment
+	let newDesc = entry.desc ? entry.desc.replace('*/', '') : '';
+	// If params exist, let's create `@param`s in JSDoc format
+	if (entry.parameters) {
+		entry.parameters.forEach((param) => {
+			const name = getName(param.name);
+			if (name) {
+				newDesc += `\n * @param `;
+				if (param.type) {
+					// Instead of getting a TS type here, use the raw Lua type
+					let rawType = '';
+					if (Array.isArray(param.type)) {
+						rawType = param.type.join('|');
+					} else {
+						rawType = param.type;
+					}
+					rawType = rawType.replace('*/', '');
+					newDesc += `{${rawType}} `;
+				}
+				newDesc += `${name} `;
+				if (param.desc) {
+					const sanitizedDesc = param.desc.replace('*/', '');
+					newDesc += `${sanitizedDesc}`;
+				}
+			}
+		});
+	}
+	return newDesc ? `/**\n * ${newDesc}\n */\n` : '';
+}
 // Main Functions
 // Function to generate TypeScript definitions for ScriptApiTable
 function generateTableDefinition(entry, details, start = false) {
@@ -251,7 +282,7 @@ function generateTableDefinition(entry, details, start = false) {
 }
 // Function to generate TypeScript definitions for ScriptApiFunction
 function generateFunctionDefinition(entry) {
-	const comment = entry.desc ? `/** ${entry.desc} */\n` : '';
+	const comment = getComments(entry);
 	let definition = `${comment}export function ${getName(entry.name)}(`;
 	if (entry.parameters) {
 		entry.parameters.forEach((param, index) => {
@@ -289,7 +320,7 @@ function generateEntryDefinition(entry) {
 	const name = getName(entry.name);
 	const varType = isAllUppercase(name) ? 'const' : 'let';
 	const type = getType(entry.type, 'return');
-	const comment = entry.desc ? `/** ${entry.desc} */\n` : '';
+	const comment = getComments(entry);
 	return `${comment}export ${varType} ${name}: ${type};\n`;
 }
 // Main function to generate TypeScript definitions for ScriptApi
