@@ -1,0 +1,9 @@
+[project]
+title = Test
+dependencies#0 = https://github.com/britzl/boom/archive/refs/heads/main.zip
+dependencies#1 = https://github.com/thejustinwalsh/defold-xmath/archive/refs/heads/main.zip
+dependencies#2 = https://github.com/britzl/extension-imgui/archive/refs/tags/1.3.1.zip
+dependencies#3 = https://github.com/indiesoftby/defold-scene3d/archive/refs/tags/1.2.0.zip
+dependencies#4 = https://github.com/selimanac/defold-random/archive/refs/tags/v1.2.6.zip
+dependencies#5 = https://github.com/indiesoftby/defold-splitmix64/archive/refs/tags/1.0.1.zip
+dependencies#6 = https://github.com/subsoap/defstring/archive/master.zip

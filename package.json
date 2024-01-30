@@ -1,0 +1,50 @@
+{
+	"name": "tsd-ext-type-gen",
+	"version": "1.0.0",
+	"description": "TypeScript definitions generator that parses script APIs from Defold extensions",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/thinknathan/tsd-ext-type-gen.git"
+	},
+	"author": "Nathan Bolton (https://thinknathan.ca/)",
+	"license": "MIT",
+	"type": "module",
+	"main": "xtgen.mjs",
+	"bin": {
+		"xtgen": "./xtgen.mjs"
+	},
+	"files": [
+		"xtgen.mjs"
+	],
+	"scripts": {
+		"ci": "npm run lint && tsc --noEmit",
+		"gen": "node xtgen.mjs -o ./output",
+		"lint": "eslint src",
+		"build": "tsc && npm run renameMjs && prettier \"*.mjs\" --write",
+		"renameMjs": "node -e \"require('fs').renameSync('xtgen.js', 'xtgen.mjs')\"",
+		"prettier": "prettier \"./**/*.{ts,d.ts,mjs,md,json}\" --write"
+	},
+	"devDependencies": {
+		"@ts-defold/types": "^1.2.37",
+		"@typescript-eslint/eslint-plugin": "~6.16.0",
+		"@typescript-eslint/parser": "~6.16.0",
+		"@types/adm-zip": "~0.5.5",
+		"@types/node": "~20.10.0",
+		"@types/yargs": "^17.0.32",
+		"@typescript-to-lua/language-extensions": "^1.19.0",
+		"eslint": "~8.56.0",
+		"eslint-config-prettier": "~9.1.0",
+		"eslint-plugin-prettier": "~5.1.0",
+		"prettier": "^3.1.1",
+		"typescript": "~5.3.3"
+	},
+	"dependencies": {
+		"adm-zip": "~0.5.10",
+		"node-fetch": "^3.3.2",
+		"yaml": "^2.3.4",
+		"yargs": "^17.7.2"
+	},
+	"overrides": {
+		"@types/node": "~20.10.0"
+	}
+}

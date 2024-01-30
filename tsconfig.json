@@ -1,0 +1,14 @@
+{
+	"compilerOptions": {
+		"lib": ["esnext"],
+		"module": "nodenext",
+		"esModuleInterop": true,
+		"outDir": "./",
+		"rootDir": "./src",
+		"sourceMap": false,
+		"strict": true,
+		"target": "ES2020",
+		"typeRoots": ["./@types", "./node_modules/@types"],
+	},
+	"exclude": ["./node_modules/*", "./*.mjs", "./output/*"],
+}

@@ -1,0 +1,13 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Defold Project Settings
+*.project linguist-language=INI
+
+# Exclude files from archive
+.gitattributes export-ignore
+.vscode export-ignore
+.prettierignore export-ignore
+.prettierrc.json export-ignore
+_docs export-ignore
+app export-ignore
