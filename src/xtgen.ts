@@ -166,6 +166,46 @@ const HEADER = `/** @noSelfInFile */
 /// <reference types="@ts-defold/types" />
 /** @noResolution */\n`;
 
+// Invalid names in TypeScript
+const INVALID_NAMES = [
+	'break',
+	'case',
+	'catch',
+	'class',
+	'const',
+	'continue',
+	'debugger',
+	'default',
+	'delete',
+	'do',
+	'else',
+	'export',
+	'extends',
+	'false',
+	'finally',
+	'for',
+	'function',
+	'if',
+	'import',
+	'in',
+	'instanceof',
+	'new',
+	'null',
+	'return',
+	'super',
+	'switch',
+	'this',
+	'throw',
+	'true',
+	'try',
+	'typeof',
+	'var',
+	'void',
+	'while',
+	'with',
+	'yield',
+];
+
 // All valid types are listed here
 const KNOWN_TYPES: { [key: string]: string } = {
 	TBL: '{}',
@@ -218,6 +258,8 @@ const KNOWN_TYPES: { [key: string]: string } = {
 // We'll make default return types slightly stricter than default param types
 const DEFAULT_PARAM_TYPE = 'any';
 const DEFAULT_RETURN_TYPE = 'unknown';
+// Theoretically, it's impossible not have a name, but just in case
+const DEFAULT_NAME_IF_BLANK = 'missingName';
 
 // Utility Functions
 
@@ -250,6 +292,11 @@ function isApiFunc(
 // Sanitizes name
 function getName(name: string) {
 	let modifiedName = name.replace('...', 'args');
+	// Check against the reserved keywords in TypeScript
+	if (INVALID_NAMES.includes(modifiedName)) {
+		console.warn(`Modifying invalid name ${modifiedName}`);
+		modifiedName = modifiedName + '_';
+	}
 	modifiedName = modifiedName.replace(/[^a-zA-Z0-9_$]/g, '_');
 	return modifiedName;
 }
@@ -278,38 +325,76 @@ function getType(
 	return defaultType;
 }
 
+function sanitizeForComment(str: string) {
+	return str.replace(/\*\//g, '');
+}
+
 // Transforms and sanitizes descriptions
 function getComments(entry: ScriptApiFunction) {
 	// Make sure the description doesn't break out of the comment
-	let newDesc = entry.desc ? entry.desc.replace(/\*\//g, '') : '';
+	const desc = entry.desc || entry.description;
+	let newDesc = desc ? sanitizeForComment(desc) : '';
+
 	// If params exist, let's create `@param`s in JSDoc format
-	if (entry.parameters) {
-		entry.parameters.forEach((param) => {
-			const name = getName(param.name);
-			if (name) {
-				newDesc += `\n * @param `;
-				if (param.type) {
-					// Instead of getting a TS type here, use the raw Lua type
-					let rawType = '';
-					if (Array.isArray(param.type)) {
-						// If multiple types, join them into a string
-						rawType = param.type.join('|');
-					} else {
-						rawType = param.type;
-					}
-					// Sanitize type name
-					rawType = rawType.replace(/[^a-zA-Z|0-9_$]/g, '_');
-					newDesc += `{${rawType}} `;
-				}
-				newDesc += `${name} `;
-				if (param.desc) {
-					const sanitizedDesc = param.desc.replace(/\*\//g, '');
-					newDesc += `${sanitizedDesc}`;
-				}
-			}
-		});
+	if (entry.parameters && Array.isArray(entry.parameters)) {
+		newDesc = getParamComments(entry.parameters, newDesc);
 	}
+
+	if (entry.examples && Array.isArray(entry.examples)) {
+		newDesc = getExampleComments(entry.examples, newDesc);
+	}
+
 	return newDesc ? `/**\n * ${newDesc}\n */\n` : '';
+}
+
+function getParamComments(parameters: ScriptApiParameter[], newDesc: string) {
+	parameters.forEach((param) => {
+		const name = param.name ? getName(param.name) : '';
+		if (name) {
+			newDesc += `\n * @param`;
+			if (param.type) {
+				// Instead of getting a TS type here, use the raw Lua type
+				let rawType = '';
+				if (Array.isArray(param.type)) {
+					// If multiple types, join them into a string
+					rawType = param.type.join('|');
+				} else {
+					rawType = param.type;
+				}
+				// Sanitize type name
+				rawType = rawType.replace(/[^a-zA-Z|0-9_$]/g, '_');
+				newDesc += ` {${rawType}}`;
+			}
+			newDesc += ` ${name}`;
+
+			const desc = param.desc || param.description;
+			if (desc) {
+				newDesc += ` ${sanitizeForComment(desc)}`;
+			}
+
+			if (param.fields && Array.isArray(param.fields)) {
+				newDesc = getParamFields(param.fields, newDesc);
+			}
+		}
+	});
+	return newDesc;
+}
+
+function getParamFields(fields: ScriptApiEntry[], newDesc: string) {
+	fields.forEach((field) => {
+		newDesc += ` ${sanitizeForComment(JSON.stringify(field))}`;
+	});
+	return newDesc;
+}
+
+function getExampleComments(examples: ScriptApiExample[], newDesc: string) {
+	examples.forEach((example) => {
+		const desc = example.desc || example.description;
+		if (desc) {
+			newDesc += `\n * @example ${sanitizeForComment(desc)}`;
+		}
+	});
+	return newDesc;
 }
 
 // Main Functions
@@ -320,58 +405,82 @@ function generateTableDefinition(
 	details: ScriptDetails,
 	start = false,
 ): string {
-	let tableDeclaration = `export namespace ${getName(entry.name)} {\n`;
+	const name = entry.name ? getName(entry.name) : DEFAULT_NAME_IF_BLANK;
+	let tableDeclaration = `export namespace ${name} {\n`;
 	if (start) {
 		tableDeclaration = details.isLua
-			? `declare module '${getName(entry.name)}.${getName(entry.name)}' {\n`
-			: `declare namespace ${getName(entry.name)} {\n`;
+			? `declare module '${name}.${name}' {\n`
+			: `declare namespace ${name} {\n`;
 	}
 
-	return `${tableDeclaration}${generateTypeScriptDefinitions(entry.members, details)}\n}`;
+	if (entry.members && Array.isArray(entry.members)) {
+		return `${tableDeclaration}${generateTypeScriptDefinitions(entry.members, details)}}`;
+	} else {
+		return `${tableDeclaration}}`;
+	}
 }
 
 // Function to generate TypeScript definitions for ScriptApiFunction
-function generateFunctionDefinition(entry: ScriptApiFunction): string {
-	const comment = getComments(entry);
-	let definition = `${comment}export function ${getName(entry.name)}(`;
+function generateFunctionDefinition(
+	entry: ScriptApiFunction,
+	isParam: boolean,
+): string {
+	const parameters = entry.parameters
+		? entry.parameters.map(getParameterDefinition).join(', ')
+		: '';
+	const returnType = getReturnType(entry.return || entry.returns);
 
-	if (entry.parameters) {
-		entry.parameters.forEach((param, index) => {
-			const name = getName(param.name);
-			definition += `${name}${param.optional ? '?' : ''}: ${getType(param.type, 'param')}`;
-			if (index < entry.parameters!.length - 1) {
-				definition += ', ';
-			}
-		});
-	}
-
-	// People don't use `return` and `returns` consistently, so check for both
-	const returnObj = entry.return || entry.returns;
-	if (returnObj) {
-		definition += `): `;
-		// Handle a special situation where the func has multiple return values
-		if (returnObj.length > 1) {
-			definition += `LuaMultiReturn<[`;
-			returnObj.forEach((obj, index) => {
-				definition += `${getType(obj.type, 'return')}`;
-				if (index < returnObj.length - 1) {
-					definition += ', ';
-				}
-			});
-			definition += `]>`;
-		} else {
-			definition += `${returnObj ? returnObj.map((ret) => getType(ret.type, 'return')).join(' | ') : DEFAULT_RETURN_TYPE}`;
-		}
+	if (isParam) {
+		return `(${parameters}) => ${returnType}`;
 	} else {
-		definition += `): void`;
+		const comment = getComments(entry);
+		const name = entry.name ? getName(entry.name) : DEFAULT_NAME_IF_BLANK;
+		return `${comment}export function ${name}(${parameters}): ${returnType};\n`;
+	}
+}
+
+function getParameterDefinition(param: ScriptApiParameter): string {
+	const name = param.name ? getName(param.name) : DEFAULT_NAME_IF_BLANK;
+	const optional = param.optional ? '?' : '';
+	let type = getType(param.type, 'param');
+
+	if (type === KNOWN_TYPES['FUNCTION']) {
+		// Get a more specific function signature
+		type = generateFunctionDefinition(param, true);
+	} else if (
+		type === KNOWN_TYPES['TABLE'] &&
+		param.fields &&
+		Array.isArray(param.fields)
+	) {
+		// Try to get the exact parameters of a table
+		type = `{ ${param.fields.map(getParameterDefinition).join('; ')} }`;
+	}
+	return `${name}${optional}: ${type}`;
+}
+
+function getReturnType(
+	returnObj: ScriptApiEntry | ScriptApiEntry[] | undefined,
+): string {
+	if (!returnObj) {
+		return 'void';
 	}
 
-	return `${definition};\n`;
+	if (Array.isArray(returnObj)) {
+		if (returnObj.length > 1) {
+			return `LuaMultiReturn<[${returnObj.map((ret) => getType(ret.type, 'return')).join(', ')}]>`;
+		} else {
+			return `${returnObj.map((ret) => getType(ret.type, 'return')).join(', ')}`;
+		}
+	} else if (returnObj.type) {
+		return getType(returnObj.type, 'return');
+	} else {
+		return 'void'; // Fallback in case we can't parse it at all
+	}
 }
 
 // Function to generate TypeScript definitions for ScriptApiEntry
 function generateEntryDefinition(entry: ScriptApiEntry): string {
-	const name = getName(entry.name);
+	const name = entry.name ? getName(entry.name) : DEFAULT_NAME_IF_BLANK;
 	const varType = isAllUppercase(name) ? 'const' : 'let';
 	const type = getType(entry.type, 'return');
 	const comment = getComments(entry);
@@ -389,7 +498,7 @@ function generateTypeScriptDefinitions(
 
 	api.forEach((entry) => {
 		// Handle nested properties
-		if (entry.name.includes('.')) {
+		if (entry.name && entry.name.includes('.')) {
 			const namePieces = entry.name.split('.');
 			const entryNamespace = namePieces[0];
 			const entryName = namePieces[1];
@@ -407,7 +516,7 @@ function generateTypeScriptDefinitions(
 				definitions === '',
 			);
 		} else if (isApiFunc(entry)) {
-			definitions += generateFunctionDefinition(entry);
+			definitions += generateFunctionDefinition(entry, false);
 		} else {
 			definitions += generateEntryDefinition(entry);
 		}
@@ -425,7 +534,7 @@ function generateTypeScriptDefinitions(
 				if (isApiTable(entry)) {
 					definitions += generateTableDefinition(entry, details);
 				} else if (isApiFunc(entry)) {
-					definitions += generateFunctionDefinition(entry);
+					definitions += generateFunctionDefinition(entry, false);
 				} else {
 					definitions += generateEntryDefinition(entry);
 				}
