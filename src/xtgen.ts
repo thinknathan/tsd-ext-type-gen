@@ -407,7 +407,7 @@ function generateFunctionDefinition(entry: ScriptApiFunction): string {
 				});
 				definition += `]>`;
 			} else {
-				definition += `${returnObj ? returnObj.map((ret) => getType(ret.type, 'return')).join(' | ') : DEFAULT_RETURN_TYPE}`;
+				definition += `${returnObj.map((ret) => getType(ret.type, 'return')).join(' | ')}`;
 			}
 		} else if (returnObj.type) {
 			// Some poorly formatted files do not return an array
