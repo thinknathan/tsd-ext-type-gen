@@ -365,11 +365,12 @@ function generateTableDefinition(
 	details: ScriptDetails,
 	start = false,
 ): string {
-	let tableDeclaration = `export namespace ${getName(entry.name)} {\n`;
+	const name = getName(entry.name);
+	let tableDeclaration = `export namespace ${name} {\n`;
 	if (start) {
 		tableDeclaration = details.isLua
-			? `declare module '${getName(entry.name)}.${getName(entry.name)}' {\n`
-			: `declare namespace ${getName(entry.name)} {\n`;
+			? `declare module '${name}.${name}' {\n`
+			: `declare namespace ${name} {\n`;
 	}
 
 	return `${tableDeclaration}${generateTypeScriptDefinitions(entry.members, details)}\n}`;
