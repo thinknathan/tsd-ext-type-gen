@@ -1,11 +1,19 @@
 [project]
 title = Test
-dependencies#0 = https://github.com/britzl/boom/archive/refs/heads/main.zip
+# Value from fuzz.script_api as a zip
+dependencies#0 = data:application/zip;base64,UEsDBBQACAAIADtMPlgAAAAAAAAAAJ8EAAAPACAAZnV6ei5zY3JpcHRfYXBpVVQNAAcCM7llAzO5ZQIzuWV1eAsAAQT1AQAABBQAAACllNFqgzAUhu/7FMeOeeFovdhdYawg29hg3UX7Aqk5tgGNkhxLJ334JWq7KNoVlitDzjnfn/w/zkCyDBcwfS2rypO7lyOh1F4upxMA+i7sES23Kdo9Rx2bfVMjcglJrqBthA92YOtYiYIgynldn2G2RaUX5hNgdiYlpiEKmgq7WkpSyphEA7arhdnxqIH2CIXKD4Ijd1GxQc3PLQVTBkEXZAcbO0gHq0kZ9e5BC94YYg8ElMMWwV4A+Rw+S012z+DAUsGhGXVRo5BKJYek2AHPPBoRFCgxKqhBjz4AHllWpNhhOu9obWKg65r+jOmk61IY7FD6ihF60lzP4++yKOk2z95Qou3UwCS07S7Ps6Pq8Jgact/sqoNheNXDk/Rt3E77pd4PPN9XYZWy9H+mOnLo8UHTkJqnbqJ+bb+vqmH1/qDhYQBBCGH4d6CGLOoQ5ldCvmvd4qNW3ZKv1nMT3aExolHWj1jkr9ab5WrTj9WdiVX9D/oBUEsHCN+ExiB1AQAAnwQAAFBLAQIUAxQACAAIADtMPljfhMYgdQEAAJ8EAAAPACAAAAAAAAAAAACkgQAAAABmdXp6LnNjcmlwdF9hcGlVVA0ABwIzuWUDM7llAjO5ZXV4CwABBPUBAAAEFAAAAFBLBQYAAAAAAQABAF0AAADSAQAAAAA=
 dependencies#1 = https://github.com/thejustinwalsh/defold-xmath/archive/refs/heads/main.zip
 dependencies#2 = https://github.com/britzl/extension-imgui/archive/refs/tags/1.3.1.zip
 dependencies#3 = https://github.com/indiesoftby/defold-scene3d/archive/refs/tags/1.2.0.zip
 dependencies#4 = https://github.com/selimanac/defold-random/archive/refs/tags/v1.2.6.zip
 dependencies#5 = https://github.com/indiesoftby/defold-splitmix64/archive/refs/tags/1.0.1.zip
 dependencies#6 = https://github.com/subsoap/defstring/archive/master.zip
-# Value from fuzz.script_api as a zip
-dependencies#7 = data:application/zip;base64,UEsDBBQACAAIADtMPlgAAAAAAAAAAJ8EAAAPACAAZnV6ei5zY3JpcHRfYXBpVVQNAAcCM7llAzO5ZQIzuWV1eAsAAQT1AQAABBQAAACllNFqgzAUhu/7FMeOeeFovdhdYawg29hg3UX7Aqk5tgGNkhxLJ334JWq7KNoVlitDzjnfn/w/zkCyDBcwfS2rypO7lyOh1F4upxMA+i7sES23Kdo9Rx2bfVMjcglJrqBthA92YOtYiYIgynldn2G2RaUX5hNgdiYlpiEKmgq7WkpSyphEA7arhdnxqIH2CIXKD4Ijd1GxQc3PLQVTBkEXZAcbO0gHq0kZ9e5BC94YYg8ElMMWwV4A+Rw+S012z+DAUsGhGXVRo5BKJYek2AHPPBoRFCgxKqhBjz4AHllWpNhhOu9obWKg65r+jOmk61IY7FD6ihF60lzP4++yKOk2z95Qou3UwCS07S7Ps6Pq8Jgact/sqoNheNXDk/Rt3E77pd4PPN9XYZWy9H+mOnLo8UHTkJqnbqJ+bb+vqmH1/qDhYQBBCGH4d6CGLOoQ5ldCvmvd4qNW3ZKv1nMT3aExolHWj1jkr9ab5WrTj9WdiVX9D/oBUEsHCN+ExiB1AQAAnwQAAFBLAQIUAxQACAAIADtMPljfhMYgdQEAAJ8EAAAPACAAAAAAAAAAAACkgQAAAABmdXp6LnNjcmlwdF9hcGlVVA0ABwIzuWUDM7llAjO5ZXV4CwABBPUBAAAEFAAAAFBLBQYAAAAAAQABAF0AAADSAQAAAAA=
+dependencies#7 = https://github.com/britzl/boom/archive/refs/heads/main.zip
+dependencies#8 = https://github.com/AGulev/jstodef/archive/refs/tags/2.0.0.zip
+dependencies#9 = https://github.com/defold/extension-review/archive/refs/tags/3.2.0.zip
+dependencies#10 = https://github.com/defold/extension-webview/archive/refs/tags/1.4.7.zip
+dependencies#11 = https://github.com/indiesoftby/defold-yametrica/archive/refs/tags/1.0.0.zip
+dependencies#12 = https://github.com/indiesoftby/defold-webgl-memory/archive/main.zip
+dependencies#13 = https://github.com/britzl/defold-lfs/archive/refs/tags/1.1.0.zip
+dependencies#14 = https://github.com/defold/extension-ironsource/archive/refs/tags/1.0.0.zip
+dependencies#15 = https://github.com/alchimystic/defold-rng/archive/refs/tags/v1.1.0.zip
