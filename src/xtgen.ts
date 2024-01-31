@@ -327,34 +327,41 @@ function getType(
 function getComments(entry: ScriptApiFunction) {
 	// Make sure the description doesn't break out of the comment
 	let newDesc = entry.desc ? entry.desc.replace(/\*\//g, '') : '';
+
 	// If params exist, let's create `@param`s in JSDoc format
 	if (entry.parameters) {
-		entry.parameters.forEach((param) => {
-			const name = getName(param.name);
-			if (name) {
-				newDesc += `\n * @param `;
-				if (param.type) {
-					// Instead of getting a TS type here, use the raw Lua type
-					let rawType = '';
-					if (Array.isArray(param.type)) {
-						// If multiple types, join them into a string
-						rawType = param.type.join('|');
-					} else {
-						rawType = param.type;
-					}
-					// Sanitize type name
-					rawType = rawType.replace(/[^a-zA-Z|0-9_$]/g, '_');
-					newDesc += `{${rawType}} `;
-				}
-				newDesc += `${name} `;
-				if (param.desc) {
-					const sanitizedDesc = param.desc.replace(/\*\//g, '');
-					newDesc += `${sanitizedDesc}`;
-				}
-			}
-		});
+		newDesc = getParamComments(entry.parameters, newDesc);
 	}
+
 	return newDesc ? `/**\n * ${newDesc}\n */\n` : '';
+}
+
+function getParamComments(parameters: ScriptApiParameter[], newDesc: string) {
+	parameters.forEach((param) => {
+		const name = getName(param.name);
+		if (name) {
+			newDesc += `\n * @param`;
+			if (param.type) {
+				// Instead of getting a TS type here, use the raw Lua type
+				let rawType = '';
+				if (Array.isArray(param.type)) {
+					// If multiple types, join them into a string
+					rawType = param.type.join('|');
+				} else {
+					rawType = param.type;
+				}
+				// Sanitize type name
+				rawType = rawType.replace(/[^a-zA-Z|0-9_$]/g, '_');
+				newDesc += ` {${rawType}}`;
+			}
+			newDesc += ` ${name}`;
+			if (param.desc) {
+				const sanitizedDesc = param.desc.replace(/\*\//g, '');
+				newDesc += ` ${sanitizedDesc}`;
+			}
+		}
+	});
+	return newDesc;
 }
 
 // Main Functions
@@ -387,9 +394,7 @@ function generateFunctionDefinition(entry: ScriptApiFunction): string {
 	return `${comment}export function ${getName(entry.name)}(${parameters}): ${returnType};\n`;
 }
 
-function getParameterDefinition(
-	param: ScriptApiEntry & { optional?: boolean },
-): string {
+function getParameterDefinition(param: ScriptApiParameter): string {
 	const name = getName(param.name);
 	const optional = param.optional ? '?' : '';
 	const type = getType(param.type, 'param');

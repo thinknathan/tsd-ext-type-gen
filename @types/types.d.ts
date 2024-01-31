@@ -18,10 +18,14 @@ declare interface ScriptApiTable extends ScriptApiEntry {
 }
 
 declare interface ScriptApiFunction extends ScriptApiEntry {
-	parameters?: Array<ScriptApiEntry & { optional?: boolean }>;
+	parameters?: ScriptApiParameter[];
 	return?: Partial<ScriptApiEntry> | Partial<ScriptApiEntry>[];
 	returns?: Partial<ScriptApiEntry> | Partial<ScriptApiEntry>[];
 	examples?: {
 		desc: string;
 	}[];
+}
+
+declare interface ScriptApiParameter extends ScriptApiEntry {
+	optional?: boolean;
 }
