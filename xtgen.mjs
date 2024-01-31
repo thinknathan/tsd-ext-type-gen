@@ -282,13 +282,19 @@ function getType(type, context) {
 	}
 	return defaultType;
 }
+function sanitizeForComment(str) {
+	return str.replace(/\*\//g, '');
+}
 // Transforms and sanitizes descriptions
 function getComments(entry) {
 	// Make sure the description doesn't break out of the comment
-	let newDesc = entry.desc ? entry.desc.replace(/\*\//g, '') : '';
+	let newDesc = entry.desc ? sanitizeForComment(entry.desc) : '';
 	// If params exist, let's create `@param`s in JSDoc format
-	if (entry.parameters) {
+	if (entry.parameters && Array.isArray(entry.parameters)) {
 		newDesc = getParamComments(entry.parameters, newDesc);
+	}
+	if (entry.examples && Array.isArray(entry.examples)) {
+		newDesc = getExampleComments(entry.examples, newDesc);
 	}
 	return newDesc ? `/**\n * ${newDesc}\n */\n` : '';
 }
@@ -312,9 +318,16 @@ function getParamComments(parameters, newDesc) {
 			}
 			newDesc += ` ${name}`;
 			if (param.desc) {
-				const sanitizedDesc = param.desc.replace(/\*\//g, '');
-				newDesc += ` ${sanitizedDesc}`;
+				newDesc += ` ${sanitizeForComment(param.desc)}`;
 			}
+		}
+	});
+	return newDesc;
+}
+function getExampleComments(examples, newDesc) {
+	examples.forEach((example) => {
+		if (example.desc) {
+			newDesc += `\n * @example ${sanitizeForComment(example.desc)}`;
 		}
 	});
 	return newDesc;

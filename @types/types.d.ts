@@ -21,9 +21,11 @@ declare interface ScriptApiFunction extends ScriptApiEntry {
 	parameters?: ScriptApiParameter[];
 	return?: Partial<ScriptApiEntry> | Partial<ScriptApiEntry>[];
 	returns?: Partial<ScriptApiEntry> | Partial<ScriptApiEntry>[];
-	examples?: {
-		desc: string;
-	}[];
+	examples?: ScriptApiExample[];
+}
+
+declare interface ScriptApiExample {
+	desc: string;
 }
 
 declare interface ScriptApiParameter extends ScriptApiEntry {
