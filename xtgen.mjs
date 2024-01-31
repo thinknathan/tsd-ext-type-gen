@@ -318,59 +318,45 @@ function getComments(entry) {
 // Main Functions
 // Function to generate TypeScript definitions for ScriptApiTable
 function generateTableDefinition(entry, details, start = false) {
-	let tableDeclaration = `export namespace ${getName(entry.name)} {\n`;
+	const name = getName(entry.name);
+	let tableDeclaration = `export namespace ${name} {\n`;
 	if (start) {
 		tableDeclaration = details.isLua
-			? `declare module '${getName(entry.name)}.${getName(entry.name)}' {\n`
-			: `declare namespace ${getName(entry.name)} {\n`;
+			? `declare module '${name}.${name}' {\n`
+			: `declare namespace ${name} {\n`;
 	}
 	return `${tableDeclaration}${generateTypeScriptDefinitions(entry.members, details)}\n}`;
 }
 // Function to generate TypeScript definitions for ScriptApiFunction
 function generateFunctionDefinition(entry) {
 	const comment = getComments(entry);
-	let definition = `${comment}export function ${getName(entry.name)}(`;
-	if (entry.parameters) {
-		entry.parameters.forEach((param, index) => {
-			const name = getName(param.name);
-			definition += `${name}${param.optional ? '?' : ''}: ${getType(param.type, 'param')}`;
-			if (index < entry.parameters.length - 1) {
-				definition += ', ';
-			}
-		});
+	const parameters = entry.parameters
+		? entry.parameters.map(getParameterDefinition).join(', ')
+		: '';
+	const returnType = getReturnType(entry.return || entry.returns);
+	return `${comment}export function ${getName(entry.name)}(${parameters}): ${returnType};\n`;
+}
+function getParameterDefinition(param) {
+	const name = getName(param.name);
+	const optional = param.optional ? '?' : '';
+	const type = getType(param.type, 'param');
+	return `${name}${optional}: ${type}`;
+}
+function getReturnType(returnObj) {
+	if (!returnObj) {
+		return 'void';
 	}
-	// People don't use `return` and `returns` consistently, so check for both
-	const returnObj = entry.return || entry.returns;
-	if (returnObj) {
-		// Usually it's an array of values
-		if (Array.isArray(returnObj)) {
-			definition += `): `;
-			if (returnObj.length > 1) {
-				// Handle a special situation where the func has multiple return values
-				definition += `LuaMultiReturn<[`;
-				returnObj.forEach((obj, index) => {
-					definition += `${getType(obj.type, 'return')}`;
-					if (index < returnObj.length - 1) {
-						definition += ', ';
-					}
-				});
-				definition += `]>`;
-			} else {
-				definition += `${returnObj ? returnObj.map((ret) => getType(ret.type, 'return')).join(' | ') : DEFAULT_RETURN_TYPE}`;
-			}
-		} else if (returnObj.type) {
-			// Some poorly formatted files do not return an array
-			definition += `): `;
-			definition += `${getType(returnObj.type, 'return')}`;
+	if (Array.isArray(returnObj)) {
+		if (returnObj.length > 1) {
+			return `LuaMultiReturn<[${returnObj.map((ret) => getType(ret.type, 'return')).join(', ')}]>`;
 		} else {
-			// Fallback in case we can't parse it at all
-			definition += `): void`;
+			return `${returnObj.map((ret) => getType(ret.type, 'return')).join(', ')}`;
 		}
+	} else if (returnObj.type) {
+		return getType(returnObj.type, 'return');
 	} else {
-		// There's no return type at all
-		definition += `): void`;
+		return 'void'; // Fallback in case we can't parse it at all
 	}
-	return `${definition};\n`;
 }
 // Function to generate TypeScript definitions for ScriptApiEntry
 function generateEntryDefinition(entry) {
