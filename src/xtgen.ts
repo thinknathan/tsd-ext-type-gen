@@ -348,21 +348,32 @@ function generateFunctionDefinition(entry: ScriptApiFunction): string {
 	// People don't use `return` and `returns` consistently, so check for both
 	const returnObj = entry.return || entry.returns;
 	if (returnObj) {
-		definition += `): `;
-		// Handle a special situation where the func has multiple return values
-		if (returnObj.length > 1) {
-			definition += `LuaMultiReturn<[`;
-			returnObj.forEach((obj, index) => {
-				definition += `${getType(obj.type, 'return')}`;
-				if (index < returnObj.length - 1) {
-					definition += ', ';
-				}
-			});
-			definition += `]>`;
+		// Usually it's an array of values
+		if (Array.isArray(returnObj)) {
+			definition += `): `;
+			if (returnObj.length > 1) {
+				// Handle a special situation where the func has multiple return values
+				definition += `LuaMultiReturn<[`;
+				returnObj.forEach((obj, index) => {
+					definition += `${getType(obj.type, 'return')}`;
+					if (index < returnObj.length - 1) {
+						definition += ', ';
+					}
+				});
+				definition += `]>`;
+			} else {
+				definition += `${returnObj ? returnObj.map((ret) => getType(ret.type, 'return')).join(' | ') : DEFAULT_RETURN_TYPE}`;
+			}
+		} else if (returnObj.type) {
+			// Some poorly formatted files do not return an array
+			definition += `): `;
+			definition += `${getType(returnObj.type, 'return')}`;
 		} else {
-			definition += `${returnObj ? returnObj.map((ret) => getType(ret.type, 'return')).join(' | ') : DEFAULT_RETURN_TYPE}`;
+			// Fallback in case we can't parse it at all
+			definition += `): void`;
 		}
 	} else {
+		// There's no return type at all
 		definition += `): void`;
 	}
 
