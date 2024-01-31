@@ -332,7 +332,8 @@ function sanitizeForComment(str: string) {
 // Transforms and sanitizes descriptions
 function getComments(entry: ScriptApiFunction) {
 	// Make sure the description doesn't break out of the comment
-	let newDesc = entry.desc ? sanitizeForComment(entry.desc) : '';
+	const desc = entry.desc || entry.description;
+	let newDesc = desc ? sanitizeForComment(desc) : '';
 
 	// If params exist, let's create `@param`s in JSDoc format
 	if (entry.parameters && Array.isArray(entry.parameters)) {
@@ -365,9 +366,12 @@ function getParamComments(parameters: ScriptApiParameter[], newDesc: string) {
 				newDesc += ` {${rawType}}`;
 			}
 			newDesc += ` ${name}`;
-			if (param.desc) {
-				newDesc += ` ${sanitizeForComment(param.desc)}`;
+
+			const desc = param.desc || param.description;
+			if (desc) {
+				newDesc += ` ${sanitizeForComment(desc)}`;
 			}
+
 			if (param.fields && Array.isArray(param.fields)) {
 				newDesc = getParamFields(param.fields, newDesc);
 			}
@@ -382,8 +386,9 @@ function getParamFields(fields: ScriptApiEntry[], newDesc: string) {
 
 function getExampleComments(examples: ScriptApiExample[], newDesc: string) {
 	examples.forEach((example) => {
-		if (example.desc) {
-			newDesc += `\n * @example ${sanitizeForComment(example.desc)}`;
+		const desc = example.desc || example.description;
+		if (desc) {
+			newDesc += `\n * @example ${sanitizeForComment(desc)}`;
 		}
 	});
 	return newDesc;

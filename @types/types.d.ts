@@ -11,6 +11,7 @@ declare interface ScriptApiEntry {
 	name?: string;
 	type?: string | string[];
 	desc?: string;
+	description?: string; // This is a typo, but some people use it
 }
 
 declare interface ScriptApiTable extends ScriptApiEntry {
@@ -19,13 +20,14 @@ declare interface ScriptApiTable extends ScriptApiEntry {
 
 declare interface ScriptApiFunction extends ScriptApiEntry {
 	parameters?: ScriptApiParameter[];
-	return?: ScriptApiEntry | ScriptApiEntry[];
+	return?: ScriptApiEntry | ScriptApiEntry[]; // This is a typo, but some people use it
 	returns?: ScriptApiEntry | ScriptApiEntry[];
 	examples?: ScriptApiExample[];
 }
 
 declare interface ScriptApiExample {
 	desc?: string;
+	description?: string; // This is a typo, but some people use it
 }
 
 declare interface ScriptApiParameter extends ScriptApiEntry {
