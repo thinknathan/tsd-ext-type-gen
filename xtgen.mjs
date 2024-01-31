@@ -141,6 +141,45 @@ const HEADER = `/** @noSelfInFile */
 /// <reference types="@typescript-to-lua/language-extensions" />
 /// <reference types="@ts-defold/types" />
 /** @noResolution */\n`;
+// Invalid names in TypeScript
+const INVALID_NAMES = [
+	'break',
+	'case',
+	'catch',
+	'class',
+	'const',
+	'continue',
+	'debugger',
+	'default',
+	'delete',
+	'do',
+	'else',
+	'export',
+	'extends',
+	'false',
+	'finally',
+	'for',
+	'function',
+	'if',
+	'import',
+	'in',
+	'instanceof',
+	'new',
+	'null',
+	'return',
+	'super',
+	'switch',
+	'this',
+	'throw',
+	'true',
+	'try',
+	'typeof',
+	'var',
+	'void',
+	'while',
+	'with',
+	'yield',
+];
 // All valid types are listed here
 const KNOWN_TYPES = {
 	TBL: '{}',
@@ -215,6 +254,11 @@ function isApiFunc(entry) {
 // Sanitizes name
 function getName(name) {
 	let modifiedName = name.replace('...', 'args');
+	// Check against the reserved keywords in TypeScript
+	if (INVALID_NAMES.includes(modifiedName)) {
+		console.warn(`Modifying invalid name ${modifiedName}`);
+		modifiedName = modifiedName + '_';
+	}
 	modifiedName = modifiedName.replace(/[^a-zA-Z0-9_$]/g, '_');
 	return modifiedName;
 }
