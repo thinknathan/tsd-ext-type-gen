@@ -241,7 +241,7 @@ function getType(type, context) {
 // Transforms and sanitizes descriptions
 function getComments(entry) {
 	// Make sure the description doesn't break out of the comment
-	let newDesc = entry.desc ? entry.desc.replace('*/', '') : '';
+	let newDesc = entry.desc ? entry.desc.replace(/\*\//g, '') : '';
 	// If params exist, let's create `@param`s in JSDoc format
 	if (entry.parameters) {
 		entry.parameters.forEach((param) => {
@@ -252,16 +252,18 @@ function getComments(entry) {
 					// Instead of getting a TS type here, use the raw Lua type
 					let rawType = '';
 					if (Array.isArray(param.type)) {
+						// If multiple types, join them into a string
 						rawType = param.type.join('|');
 					} else {
 						rawType = param.type;
 					}
-					rawType = rawType.replace('*/', '');
+					// Sanitize type name
+					rawType = rawType.replace(/[^a-zA-Z|0-9_$]/g, '_');
 					newDesc += `{${rawType}} `;
 				}
 				newDesc += `${name} `;
 				if (param.desc) {
-					const sanitizedDesc = param.desc.replace('*/', '');
+					const sanitizedDesc = param.desc.replace(/\*\//g, '');
 					newDesc += `${sanitizedDesc}`;
 				}
 			}
