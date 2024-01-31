@@ -381,6 +381,9 @@ function getParamComments(parameters: ScriptApiParameter[], newDesc: string) {
 }
 
 function getParamFields(fields: ScriptApiEntry[], newDesc: string) {
+	fields.forEach((field) => {
+		newDesc += ` ${sanitizeForComment(JSON.stringify(field))}`;
+	});
 	return newDesc;
 }
 
@@ -418,21 +421,32 @@ function generateTableDefinition(
 }
 
 // Function to generate TypeScript definitions for ScriptApiFunction
-function generateFunctionDefinition(entry: ScriptApiFunction): string {
-	const comment = getComments(entry);
+function generateFunctionDefinition(
+	entry: ScriptApiFunction,
+	isParam: boolean,
+): string {
 	const parameters = entry.parameters
 		? entry.parameters.map(getParameterDefinition).join(', ')
 		: '';
 	const returnType = getReturnType(entry.return || entry.returns);
-	const name = entry.name ? getName(entry.name) : DEFAULT_NAME_IF_BLANK;
 
-	return `${comment}export function ${name}(${parameters}): ${returnType};\n`;
+	if (isParam) {
+		return `(${parameters}) => ${returnType}`;
+	} else {
+		const comment = getComments(entry);
+		const name = entry.name ? getName(entry.name) : DEFAULT_NAME_IF_BLANK;
+		return `${comment}export function ${name}(${parameters}): ${returnType};\n`;
+	}
 }
 
 function getParameterDefinition(param: ScriptApiParameter): string {
 	const name = param.name ? getName(param.name) : DEFAULT_NAME_IF_BLANK;
 	const optional = param.optional ? '?' : '';
-	const type = getType(param.type, 'param');
+	let type = getType(param.type, 'param');
+
+	if (type === KNOWN_TYPES['FUNCTION']) {
+		type = generateFunctionDefinition(param, true);
+	}
 
 	return `${name}${optional}: ${type}`;
 }
@@ -495,7 +509,7 @@ function generateTypeScriptDefinitions(
 				definitions === '',
 			);
 		} else if (isApiFunc(entry)) {
-			definitions += generateFunctionDefinition(entry);
+			definitions += generateFunctionDefinition(entry, false);
 		} else {
 			definitions += generateEntryDefinition(entry);
 		}
@@ -513,7 +527,7 @@ function generateTypeScriptDefinitions(
 				if (isApiTable(entry)) {
 					definitions += generateTableDefinition(entry, details);
 				} else if (isApiFunc(entry)) {
-					definitions += generateFunctionDefinition(entry);
+					definitions += generateFunctionDefinition(entry, false);
 				} else {
 					definitions += generateEntryDefinition(entry);
 				}
