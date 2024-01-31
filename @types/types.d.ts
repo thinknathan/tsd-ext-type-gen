@@ -8,26 +8,27 @@ declare type ScriptApi = Array<
 >;
 
 declare interface ScriptApiEntry {
-	name: string;
-	type: string | string[];
+	name?: string;
+	type?: string | string[];
 	desc?: string;
 }
 
 declare interface ScriptApiTable extends ScriptApiEntry {
-	members: Array<ScriptApiEntry | ScriptApiFunction | ScriptApiTable>;
+	members?: Array<ScriptApiEntry | ScriptApiFunction | ScriptApiTable>;
 }
 
 declare interface ScriptApiFunction extends ScriptApiEntry {
 	parameters?: ScriptApiParameter[];
-	return?: Partial<ScriptApiEntry> | Partial<ScriptApiEntry>[];
-	returns?: Partial<ScriptApiEntry> | Partial<ScriptApiEntry>[];
+	return?: ScriptApiEntry | ScriptApiEntry[];
+	returns?: ScriptApiEntry | ScriptApiEntry[];
 	examples?: ScriptApiExample[];
 }
 
 declare interface ScriptApiExample {
-	desc: string;
+	desc?: string;
 }
 
 declare interface ScriptApiParameter extends ScriptApiEntry {
 	optional?: boolean;
+	fields?: ScriptApiEntry[];
 }

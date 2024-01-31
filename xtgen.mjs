@@ -231,6 +231,8 @@ const KNOWN_TYPES = {
 // We'll make default return types slightly stricter than default param types
 const DEFAULT_PARAM_TYPE = 'any';
 const DEFAULT_RETURN_TYPE = 'unknown';
+// Theoretically, it's impossible not have a name, but just in case
+const DEFAULT_NAME_IF_BLANK = 'missingName';
 // Utility Functions
 // Check if a string is all uppercase with optional underscores
 function isAllUppercase(str) {
@@ -300,7 +302,7 @@ function getComments(entry) {
 }
 function getParamComments(parameters, newDesc) {
 	parameters.forEach((param) => {
-		const name = getName(param.name);
+		const name = param.name ? getName(param.name) : '';
 		if (name) {
 			newDesc += `\n * @param`;
 			if (param.type) {
@@ -320,8 +322,14 @@ function getParamComments(parameters, newDesc) {
 			if (param.desc) {
 				newDesc += ` ${sanitizeForComment(param.desc)}`;
 			}
+			if (param.fields && Array.isArray(param.fields)) {
+				newDesc = getParamFields(param.fields, newDesc);
+			}
 		}
 	});
+	return newDesc;
+}
+function getParamFields(fields, newDesc) {
 	return newDesc;
 }
 function getExampleComments(examples, newDesc) {
@@ -335,14 +343,18 @@ function getExampleComments(examples, newDesc) {
 // Main Functions
 // Function to generate TypeScript definitions for ScriptApiTable
 function generateTableDefinition(entry, details, start = false) {
-	const name = getName(entry.name);
+	const name = entry.name ? getName(entry.name) : DEFAULT_NAME_IF_BLANK;
 	let tableDeclaration = `export namespace ${name} {\n`;
 	if (start) {
 		tableDeclaration = details.isLua
 			? `declare module '${name}.${name}' {\n`
 			: `declare namespace ${name} {\n`;
 	}
-	return `${tableDeclaration}${generateTypeScriptDefinitions(entry.members, details)}\n}`;
+	if (entry.members && Array.isArray(entry.members)) {
+		return `${tableDeclaration}${generateTypeScriptDefinitions(entry.members, details)}}`;
+	} else {
+		return `${tableDeclaration}}`;
+	}
 }
 // Function to generate TypeScript definitions for ScriptApiFunction
 function generateFunctionDefinition(entry) {
@@ -351,10 +363,11 @@ function generateFunctionDefinition(entry) {
 		? entry.parameters.map(getParameterDefinition).join(', ')
 		: '';
 	const returnType = getReturnType(entry.return || entry.returns);
-	return `${comment}export function ${getName(entry.name)}(${parameters}): ${returnType};\n`;
+	const name = entry.name ? getName(entry.name) : DEFAULT_NAME_IF_BLANK;
+	return `${comment}export function ${name}(${parameters}): ${returnType};\n`;
 }
 function getParameterDefinition(param) {
-	const name = getName(param.name);
+	const name = param.name ? getName(param.name) : DEFAULT_NAME_IF_BLANK;
 	const optional = param.optional ? '?' : '';
 	const type = getType(param.type, 'param');
 	return `${name}${optional}: ${type}`;
@@ -377,7 +390,7 @@ function getReturnType(returnObj) {
 }
 // Function to generate TypeScript definitions for ScriptApiEntry
 function generateEntryDefinition(entry) {
-	const name = getName(entry.name);
+	const name = entry.name ? getName(entry.name) : DEFAULT_NAME_IF_BLANK;
 	const varType = isAllUppercase(name) ? 'const' : 'let';
 	const type = getType(entry.type, 'return');
 	const comment = getComments(entry);
@@ -389,7 +402,7 @@ function generateTypeScriptDefinitions(api, details) {
 	const namespaces = {};
 	api.forEach((entry) => {
 		// Handle nested properties
-		if (entry.name.includes('.')) {
+		if (entry.name && entry.name.includes('.')) {
 			const namePieces = entry.name.split('.');
 			const entryNamespace = namePieces[0];
 			const entryName = namePieces[1];
