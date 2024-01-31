@@ -5,7 +5,8 @@
 	"editor.tabSize": 2,
 	"editor.detectIndentation": false,
 	"files.associations": {
-		"*.project": "ini"
+		"*.project": "ini",
+		"*.script_api": "yaml"
 	},
 	"[typescript]": {
 		"editor.defaultFormatter": "esbenp.prettier-vscode"

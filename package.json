@@ -1,6 +1,6 @@
 {
 	"name": "tsd-ext-type-gen",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"description": "TypeScript definitions generator that parses script APIs from Defold extensions",
 	"repository": {
 		"type": "git",
@@ -17,11 +17,12 @@
 		"xtgen.mjs"
 	],
 	"scripts": {
-		"ci": "npm run lint && tsc --noEmit",
-		"gen": "node xtgen.mjs -o ./output",
+		"ci": "npm run lint && npm run test && tsc --project ./test.tsconfig.json --noEmit",
+		"gen": "node xtgen.mjs -p ./tests/game.project -o ./output",
 		"lint": "eslint src",
 		"build": "tsc && npm run renameMjs && prettier \"*.mjs\" --write",
 		"renameMjs": "node -e \"require('fs').renameSync('xtgen.js', 'xtgen.mjs')\"",
+		"test": "node xtgen.mjs -p ./tests/game.project",
 		"prettier": "prettier \"./**/*.{ts,d.ts,mjs,md,json}\" --write"
 	},
 	"devDependencies": {
