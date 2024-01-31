@@ -382,6 +382,8 @@ function getParameterDefinition(param) {
 	let type = getType(param.type, 'param');
 	if (type === KNOWN_TYPES['FUNCTION']) {
 		type = generateFunctionDefinition(param, true);
+	} else if (type === KNOWN_TYPES['TABLE'] && param.fields) {
+		type = `{ ${param.fields.map(getParameterDefinition).join('; ')} }`;
 	}
 	return `${name}${optional}: ${type}`;
 }

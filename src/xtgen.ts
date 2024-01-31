@@ -445,9 +445,16 @@ function getParameterDefinition(param: ScriptApiParameter): string {
 	let type = getType(param.type, 'param');
 
 	if (type === KNOWN_TYPES['FUNCTION']) {
+		// Get a more specific function signature
 		type = generateFunctionDefinition(param, true);
+	} else if (
+		type === KNOWN_TYPES['TABLE'] &&
+		param.fields &&
+		Array.isArray(param.fields)
+	) {
+		// Try to get the exact parameters of a table
+		type = `{ ${param.fields.map(getParameterDefinition).join('; ')} }`;
 	}
-
 	return `${name}${optional}: ${type}`;
 }
 
