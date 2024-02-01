@@ -7,140 +7,10 @@ import fetch from 'node-fetch';
 import { parse } from 'yaml';
 import yargs from 'yargs';
 const DEBUG = false;
-async function main() {
-	console.time('Done in');
-	// Command line args
-	const argv = await yargs(process.argv.slice(2))
-		.option('p', {
-			alias: 'project',
-			describe: 'Path to your project file',
-			type: 'string',
-			default: './app/game.project',
-		})
-		.option('o', {
-			alias: 'outDir',
-			describe: 'The output directory',
-			type: 'string',
-			default: './@types',
-		})
-		.parse();
-	const project = argv.p;
-	const outDir = argv.o;
-	// Find project file
-	const absPath = path.join(process.cwd(), project);
-	// Read project file
-	let iniData = '';
-	try {
-		iniData = await fs.promises.readFile(absPath, 'utf8');
-	} catch (e) {
-		console.error(e);
-		return;
-	}
-	// Locate dependencies
-	const deps = iniData
-		.split('\n')
-		.filter((l) => l.startsWith('dependencies'))
-		.map((dep) => {
-			return dep.split('=')[1].trim();
-		});
-	if (deps.length === 0) {
-		console.error('Could not find dependencies in project file.');
-		return;
-	}
-	// Iterate over each dependency
-	await Promise.all(
-		deps.map(async (dep) => {
-			const details = {
-				name: '', // We'll guess the name later
-				isLua: true,
-			};
-			// Fetch dependency zip file
-			const req = await fetch(dep);
-			if (!req.ok) {
-				console.error(`Failed to fetch dependency ${dep}`);
-				return;
-			}
-			// Get a node-specific buffer from the request
-			const zipBuffer = Buffer.from(await req.arrayBuffer());
-			// Unzip file into memory
-			const zip = new AdmZip(zipBuffer);
-			if (!zip.test()) {
-				console.error(`Zip archive damaged for ${dep}`);
-				return;
-			}
-			// Locate all files inside the zip
-			const files = zip.getEntries();
-			// If there's a C++ file, it's probably not a Lua module
-			files.some((entry) => {
-				if (entry.name.endsWith('.cpp')) {
-					details.isLua = false;
-					return true;
-				}
-				return false;
-			});
-			// Attempt to locate a `script_api` file to parse
-			let api = [];
-			try {
-				api = files
-					.filter((entry) => entry.name.endsWith('.script_api'))
-					// Use a YAML parser to construction a JS object
-					.map((entry) => {
-						// Guess the name based on the script_api's filename
-						details.name = entry.name.split('.')[0];
-						return parse(entry.getData().toString('utf8'));
-					})[0];
-			} catch (e) {
-				console.error(e);
-				return;
-			}
-			// If we have no API to parse, exit early
-			if (!api || api.length === 0) {
-				return;
-			}
-			// Make output directory
-			try {
-				await fs.promises.mkdir(path.join(process.cwd(), outDir));
-			} catch {
-				// Silence this error
-			}
-			// Debug: Export JSON of parsed YAML
-			if (DEBUG) {
-				try {
-					await fs.promises.writeFile(
-						path.join(process.cwd(), outDir, details.name + '.json'),
-						JSON.stringify(api),
-					);
-				} catch (e) {
-					console.error(e);
-					return;
-				}
-			}
-			// Turn our parsed object into definitions
-			const result = generateTypeScriptDefinitions(api, details);
-			if (result) {
-				// Append header
-				const final = HEADER + result;
-				// Save the definitions to file
-				try {
-					await fs.promises.writeFile(
-						path.join(process.cwd(), outDir, details.name + '.d.ts'),
-						final,
-					);
-				} catch (e) {
-					console.error(e);
-					return;
-				}
-			}
-		}),
-	);
-	console.timeEnd('Done in');
-	console.log(`Exported definitions to ${path.join(process.cwd(), outDir)}`);
-}
 // Definitions file starts with this string
 const HEADER = `/** @noSelfInFile */
 /// <reference types="@typescript-to-lua/language-extensions" />
-/// <reference types="@ts-defold/types" />
-/** @noResolution */\n`;
+/// <reference types="@ts-defold/types" />\n`;
 // Invalid names in TypeScript
 const INVALID_NAMES = [
 	'break',
@@ -231,8 +101,139 @@ const KNOWN_TYPES = {
 // We'll make default return types slightly stricter than default param types
 const DEFAULT_PARAM_TYPE = 'any';
 const DEFAULT_RETURN_TYPE = 'unknown';
-// Theoretically, it's impossible not have a name, but just in case
+// Theoretically, it's impossible not to have a name, but just in case
 const DEFAULT_NAME_IF_BLANK = 'missingName';
+async function main() {
+	console.time('Done in');
+	// Command line args
+	const argv = await yargs(process.argv.slice(2))
+		.option('p', {
+			alias: 'project',
+			describe: 'Path to your project file',
+			type: 'string',
+			default: './app/game.project',
+		})
+		.option('o', {
+			alias: 'outDir',
+			describe: 'The output directory',
+			type: 'string',
+			default: './@types',
+		})
+		.parse();
+	const project = argv.p;
+	const outDir = argv.o;
+	// Find project file
+	const absPath = path.join(process.cwd(), project);
+	// Read project file
+	let iniData = '';
+	try {
+		iniData = await fs.promises.readFile(absPath, 'utf8');
+	} catch (e) {
+		console.error(e, absPath);
+		return;
+	}
+	// Locate dependencies
+	const deps = iniData
+		.split('\n')
+		.filter((l) => l.startsWith('dependencies'))
+		.map((dep) => {
+			return dep.split('=')[1].trim();
+		});
+	if (deps.length === 0) {
+		console.error('Could not find dependencies in project file.', absPath);
+		return;
+	}
+	// Iterate over each dependency
+	await Promise.all(
+		deps.map(async (dep) => {
+			const details = {
+				name: '', // We'll guess the name later
+				isLua: true,
+			};
+			// Fetch dependency zip file
+			const req = await fetch(dep);
+			if (!req.ok) {
+				console.error(`Failed to fetch dependency ${dep}`);
+				return;
+			}
+			// Get a node-specific buffer from the request
+			const zipBuffer = Buffer.from(await req.arrayBuffer());
+			// Unzip file into memory
+			const zip = new AdmZip(zipBuffer);
+			if (!zip.test()) {
+				console.error(`Zip archive damaged for ${dep}`);
+				return;
+			}
+			// Locate all files inside the zip
+			const files = zip.getEntries();
+			// If there's a C++ file, it's probably not a Lua module
+			files.some((entry) => {
+				if (entry.name.endsWith('.cpp')) {
+					details.isLua = false;
+					return true;
+				}
+				return false;
+			});
+			// Attempt to locate a `script_api` file to parse
+			let api = [];
+			try {
+				api = files
+					.filter((entry) => entry.name.endsWith('.script_api'))
+					// Use a YAML parser to construction a JS object
+					.map((entry) => {
+						// Guess the name based on the script_api's filename
+						details.name = entry.name.split('.')[0];
+						return parse(entry.getData().toString('utf8'));
+					})[0];
+			} catch (e) {
+				console.error(e, dep);
+				return;
+			}
+			// If we have no API to parse, exit early
+			if (!api || api.length === 0) {
+				return;
+			}
+			// Make output directory
+			try {
+				await fs.promises.mkdir(path.join(process.cwd(), outDir));
+			} catch {
+				// Silence this error
+			}
+			// Debug: Export JSON of parsed YAML
+			if (DEBUG) {
+				try {
+					await fs.promises.writeFile(
+						path.join(process.cwd(), outDir, details.name + '.json'),
+						JSON.stringify(api),
+					);
+				} catch (e) {
+					console.error(e, dep);
+					return;
+				}
+			}
+			// Turn our parsed object into definitions
+			const result = generateTypeScriptDefinitions(api, details);
+			if (result) {
+				// Guess the URL by including only the first 6 strings split by slash
+				const depUrl = dep.split('/').slice(0, 5).join('/');
+				// Append header
+				const final = `${HEADER}/**\n * @url ${depUrl}\n * @noResolution\n */\n${result}`;
+				// Save the definitions to file
+				try {
+					await fs.promises.writeFile(
+						path.join(process.cwd(), outDir, details.name + '.d.ts'),
+						final,
+					);
+				} catch (e) {
+					console.error(e, dep);
+					return;
+				}
+			}
+		}),
+	);
+	console.timeEnd('Done in');
+	console.log(`Exported definitions to ${path.join(process.cwd(), outDir)}`);
+}
 // Utility Functions
 // Check if a string is all uppercase with optional underscores
 function isAllUppercase(str) {
@@ -258,10 +259,13 @@ function getName(name) {
 	let modifiedName = name.replace('...', 'args');
 	// Check against the reserved keywords in TypeScript
 	if (INVALID_NAMES.includes(modifiedName)) {
-		console.warn(`Modifying invalid name ${modifiedName}`);
 		modifiedName = modifiedName + '_';
 	}
+	// Sanitize type name, allow alpha-numeric and underscore
 	modifiedName = modifiedName.replace(/[^a-zA-Z0-9_$]/g, '_');
+	if (modifiedName !== name) {
+		console.warn(`Modifying invalid name "${name}" to "${modifiedName}"`);
+	}
 	return modifiedName;
 }
 // Transforms API type to TS type
@@ -291,15 +295,50 @@ function sanitizeForComment(str) {
 function getComments(entry) {
 	// Make sure the description doesn't break out of the comment
 	const desc = entry.desc || entry.description;
-	let newDesc = desc ? sanitizeForComment(desc) : '';
+	let newDesc = desc ?? '';
 	// If params exist, let's create `@param`s in JSDoc format
 	if (entry.parameters && Array.isArray(entry.parameters)) {
 		newDesc = getParamComments(entry.parameters, newDesc);
 	}
+	// Comments for `@returns`
+	const returnObj = entry.return || entry.returns;
+	if (returnObj) {
+		newDesc = getReturnComments(returnObj, newDesc);
+	}
+	// Comments for `@example`
 	if (entry.examples && Array.isArray(entry.examples)) {
 		newDesc = getExampleComments(entry.examples, newDesc);
 	}
-	return newDesc ? `/**\n * ${newDesc}\n */\n` : '';
+	return newDesc ? `/**\n * ${sanitizeForComment(newDesc)}\n */\n` : '';
+}
+function getReturnComments(returnObj, newDesc) {
+	let returnType = '';
+	let comments = '';
+	if (Array.isArray(returnObj)) {
+		if (returnObj.length > 1) {
+			returnType = `LuaMultiReturn<[${returnObj.map((ret) => ret.type).join(', ')}]>`;
+		} else {
+			returnType = Array.isArray(returnObj[0].type)
+				? returnObj[0].type.join(' | ')
+				: returnObj[0].type ?? '';
+		}
+		// Add comments if they exist
+		if (returnObj.some((ret) => ret.desc || ret.description)) {
+			comments = `${returnObj.map((ret) => ret.desc || ret.description).join(' | ')}`;
+		}
+	} else if (returnObj.type) {
+		// Instead of getting a TS type here, use the raw Lua type
+		returnType = Array.isArray(returnObj.type)
+			? returnObj.type.join(' | ')
+			: returnObj.type;
+		comments = getType(returnObj.type, 'return');
+	}
+	// If we've figured out a comment, but not a returnType
+	if (comments.length && !returnType.length) {
+		returnType = DEFAULT_RETURN_TYPE;
+	}
+	newDesc += `\n * @returns {${returnType}} ${comments}`;
+	return newDesc;
 }
 function getParamComments(parameters, newDesc) {
 	parameters.forEach((param) => {
@@ -315,14 +354,14 @@ function getParamComments(parameters, newDesc) {
 				} else {
 					rawType = param.type;
 				}
-				// Sanitize type name
+				// Sanitize type name, allow alpha-numeric, underscore and pipe
 				rawType = rawType.replace(/[^a-zA-Z|0-9_$]/g, '_');
 				newDesc += ` {${rawType}}`;
 			}
 			newDesc += ` ${name}`;
 			const desc = param.desc || param.description;
 			if (desc) {
-				newDesc += ` ${sanitizeForComment(desc)}`;
+				newDesc += ` ${desc}`;
 			}
 			if (param.fields && Array.isArray(param.fields)) {
 				newDesc = getParamFields(param.fields, newDesc);
@@ -333,7 +372,7 @@ function getParamComments(parameters, newDesc) {
 }
 function getParamFields(fields, newDesc) {
 	fields.forEach((field) => {
-		newDesc += ` ${sanitizeForComment(JSON.stringify(field))}`;
+		newDesc += ` ${JSON.stringify(field)}`;
 	});
 	return newDesc;
 }
@@ -341,7 +380,7 @@ function getExampleComments(examples, newDesc) {
 	examples.forEach((example) => {
 		const desc = example.desc || example.description;
 		if (desc) {
-			newDesc += `\n * @example ${sanitizeForComment(desc)}`;
+			newDesc += `\n * @example ${desc}`;
 		}
 	});
 	return newDesc;
@@ -381,8 +420,14 @@ function getParameterDefinition(param) {
 	const optional = param.optional ? '?' : '';
 	let type = getType(param.type, 'param');
 	if (type === KNOWN_TYPES['FUNCTION']) {
+		// Get a more specific function signature
 		type = generateFunctionDefinition(param, true);
-	} else if (type === KNOWN_TYPES['TABLE'] && param.fields) {
+	} else if (
+		type === KNOWN_TYPES['TABLE'] &&
+		param.fields &&
+		Array.isArray(param.fields)
+	) {
+		// Try to get the exact parameters of a table
 		type = `{ ${param.fields.map(getParameterDefinition).join('; ')} }`;
 	}
 	return `${name}${optional}: ${type}`;
@@ -395,7 +440,7 @@ function getReturnType(returnObj) {
 		if (returnObj.length > 1) {
 			return `LuaMultiReturn<[${returnObj.map((ret) => getType(ret.type, 'return')).join(', ')}]>`;
 		} else {
-			return `${returnObj.map((ret) => getType(ret.type, 'return')).join(', ')}`;
+			return `${getType(returnObj[0].type, 'return')}`;
 		}
 	} else if (returnObj.type) {
 		return getType(returnObj.type, 'return');
