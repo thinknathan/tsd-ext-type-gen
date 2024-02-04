@@ -256,11 +256,14 @@ function isApiFunc(entry) {
 }
 // Sanitizes name
 function getName(name) {
-	let modifiedName = name.replace('...', 'args');
+	// Special case: arguments
+	let modifiedName = name.replace(/^\.\.\.$/, 'args');
 	// Check against the reserved keywords in TypeScript
 	if (INVALID_NAMES.includes(modifiedName)) {
 		modifiedName = modifiedName + '_';
 	}
+	// Special case: Lua's `self` variable
+	modifiedName = modifiedName.replace(/^self$/, 'this');
 	// Sanitize type name, allow alpha-numeric and underscore
 	modifiedName = modifiedName.replace(/[^a-zA-Z0-9_$]/g, '_');
 	if (modifiedName !== name) {
