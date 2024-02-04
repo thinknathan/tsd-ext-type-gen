@@ -11,7 +11,7 @@ import { parse } from 'yaml';
 import yargs from 'yargs';
 import { Worker, parentPort, isMainThread } from 'worker_threads';
 
-const DEBUG = true;
+const DEBUG = false;
 
 type TWorker = Worker & { isIdle: boolean };
 
