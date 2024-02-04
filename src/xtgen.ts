@@ -16,6 +16,8 @@ const HEADER = `/** @noSelfInFile */
 
 // Invalid names in TypeScript
 const INVALID_NAMES = [
+	'any',
+	'boolean',
 	'break',
 	'case',
 	'catch',
@@ -27,6 +29,7 @@ const INVALID_NAMES = [
 	'delete',
 	'do',
 	'else',
+	'enum',
 	'export',
 	'extends',
 	'false',
@@ -34,12 +37,20 @@ const INVALID_NAMES = [
 	'for',
 	'function',
 	'if',
+	'implements',
 	'import',
 	'in',
 	'instanceof',
+	'interface',
+	'let',
 	'new',
 	'null',
+	'package',
+	'private',
+	'protected',
+	'public',
 	'return',
+	'static',
 	'super',
 	'switch',
 	'this',
@@ -47,6 +58,7 @@ const INVALID_NAMES = [
 	'true',
 	'try',
 	'typeof',
+	'undefined',
 	'var',
 	'void',
 	'while',
@@ -291,15 +303,31 @@ function isApiFunc(
 }
 
 // Sanitizes name
-function getName(name: string) {
-	let modifiedName = name.replace('...', 'args');
+function getName(name: string, isParam: boolean) {
+	let modifiedName = String(name);
+
 	// Check against the reserved keywords in TypeScript
 	if (INVALID_NAMES.includes(modifiedName)) {
 		modifiedName = modifiedName + '_';
 	}
-	// Sanitize type name, allow alpha-numeric and underscore
+
+	if (isParam) {
+		// Special case: arguments
+		modifiedName = modifiedName.replace(/^\.\.\.$/, 'args');
+		// Special case: Lua's `self` variable
+		modifiedName = modifiedName.replace(/^self$/, 'this');
+	}
+
+	// Sanitize type name: allow only alpha-numeric, underscore, dollar sign
 	modifiedName = modifiedName.replace(/[^a-zA-Z0-9_$]/g, '_');
-	if (modifiedName !== name) {
+
+	// If the first character is a number, add a dollar sign to start
+	if (/^\d/.test(modifiedName)) {
+		modifiedName = '$' + modifiedName;
+	}
+
+	// If we're modifying a function name, not a parameter, give a warning
+	if (!isParam && modifiedName !== name) {
 		console.warn(`Modifying invalid name "${name}" to "${modifiedName}"`);
 	}
 
@@ -331,7 +359,7 @@ function getType(
 }
 
 function sanitizeForComment(str: string) {
-	return str.replace(/\*\//g, '');
+	return str.replace(/\*\//g, '*\\/');
 }
 
 // Transforms and sanitizes descriptions
@@ -397,7 +425,7 @@ function getReturnComments(
 
 function getParamComments(parameters: ScriptApiParameter[], newDesc: string) {
 	parameters.forEach((param) => {
-		const name = param.name ? getName(param.name) : '';
+		const name = param.name ? getName(param.name, true) : '';
 		if (name) {
 			newDesc += `\n * @param`;
 			if (param.type) {
@@ -453,7 +481,7 @@ function generateTableDefinition(
 	details: ScriptDetails,
 	start = false,
 ): string {
-	const name = entry.name ? getName(entry.name) : DEFAULT_NAME_IF_BLANK;
+	const name = entry.name ? getName(entry.name, false) : DEFAULT_NAME_IF_BLANK;
 	let tableDeclaration = `export namespace ${name} {\n`;
 	if (start) {
 		tableDeclaration = details.isLua
@@ -482,13 +510,15 @@ function generateFunctionDefinition(
 		return `(${parameters}) => ${returnType}`;
 	} else {
 		const comment = getComments(entry);
-		const name = entry.name ? getName(entry.name) : DEFAULT_NAME_IF_BLANK;
+		const name = entry.name
+			? getName(entry.name, false)
+			: DEFAULT_NAME_IF_BLANK;
 		return `${comment}export function ${name}(${parameters}): ${returnType};\n`;
 	}
 }
 
 function getParameterDefinition(param: ScriptApiParameter): string {
-	const name = param.name ? getName(param.name) : DEFAULT_NAME_IF_BLANK;
+	const name = param.name ? getName(param.name, true) : DEFAULT_NAME_IF_BLANK;
 	const optional = param.optional ? '?' : '';
 	let type = getType(param.type, 'param');
 
@@ -528,7 +558,7 @@ function getReturnType(
 
 // Function to generate TypeScript definitions for ScriptApiEntry
 function generateEntryDefinition(entry: ScriptApiEntry): string {
-	const name = entry.name ? getName(entry.name) : DEFAULT_NAME_IF_BLANK;
+	const name = entry.name ? getName(entry.name, false) : DEFAULT_NAME_IF_BLANK;
 	const varType = isAllUppercase(name) ? 'const' : 'let';
 	const type = getType(entry.type, 'return');
 	const comment = getComments(entry);
@@ -546,7 +576,7 @@ function generateTypeScriptDefinitions(
 
 	api.forEach((entry) => {
 		// Handle nested properties
-		if (entry.name && entry.name.includes('.')) {
+		if (typeof entry.name === 'string' && entry.name.includes('.')) {
 			const namePieces = entry.name.split('.');
 			const entryNamespace = namePieces[0];
 			const entryName = namePieces[1];

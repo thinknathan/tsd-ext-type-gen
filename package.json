@@ -1,6 +1,6 @@
 {
 	"name": "tsd-ext-type-gen",
-	"version": "1.0.4",
+	"version": "1.0.5",
 	"description": "TypeScript definitions generator that parses script APIs from Defold extensions",
 	"repository": {
 		"type": "git",
