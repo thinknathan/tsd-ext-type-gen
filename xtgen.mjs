@@ -8,7 +8,8 @@ import fetch from 'node-fetch';
 import { fileURLToPath } from 'url';
 import { parse } from 'yaml';
 import yargs from 'yargs';
-import { Worker, workerData, isMainThread } from 'worker_threads';
+import { Worker, parentPort, isMainThread } from 'worker_threads';
+const DEBUG = true;
 async function main() {
 	if (isMainThread) {
 		/**
@@ -19,10 +20,31 @@ async function main() {
 		 * Manages a pool of worker threads for parallel processing.
 		 */
 		class WorkerPool {
+			isComplete() {
+				return (
+					this.taskQueue.length === 0 &&
+					this.workers.every((worker) => worker.isIdle)
+				);
+			}
+			exitAll() {
+				this.workers.forEach((worker) => worker.terminate());
+			}
+			/**
+			 * Returns a promise that resolves when all work is done.
+			 */
+			async allComplete() {
+				if (this.isComplete()) {
+					return Promise.resolve();
+				}
+				if (!this.completePromise) {
+					this.completePromise = new Promise((resolve) => {
+						this.completeResolve = resolve;
+					});
+				}
+				return this.completePromise;
+			}
 			/**
 			 * Creates a new WorkerPool instance.
-			 *
-			 * @param maxWorkers - The maximum number of worker threads in the pool.
 			 */
 			constructor(maxWorkers) {
 				this.workers = [];
@@ -33,19 +55,22 @@ async function main() {
 			 * Creates a worker thread for processing a specific file with given options.
 			 */
 			createWorker(dep, outDir) {
-				const worker = new Worker(fileURLToPath(import.meta.url), {
-					workerData: { dep, outDir },
-				});
-				// Listen for messages and errors from the worker
-				worker.on('message', (message) => {
-					console.log(message);
+				const worker = new Worker(fileURLToPath(import.meta.url));
+				worker.postMessage({ dep, outDir });
+				worker.isIdle = false;
+				worker.on('message', () => {
+					worker.isIdle = true;
 					this.processNextTask();
 				});
 				worker.on('error', (err) => {
 					console.error(`Error in worker for file ${dep}:`, err);
+					worker.isIdle = true;
 					this.processNextTask();
 				});
 				this.workers.push(worker);
+				if (DEBUG) {
+					console.log(`Creating worker #${this.workers.length}`);
+				}
 			}
 			/**
 			 * Processes the next task in the queue.
@@ -53,7 +78,24 @@ async function main() {
 			processNextTask() {
 				const nextTask = this.taskQueue.shift();
 				if (nextTask) {
-					this.createWorker(nextTask.dep, nextTask.outDir);
+					if (this.workers.length < this.maxWorkers) {
+						this.createWorker(nextTask.dep, nextTask.outDir);
+					} else {
+						const worker = this.workers.find((w) => w.isIdle);
+						if (worker) {
+							worker.postMessage(nextTask);
+						} else {
+							// Something went wrong, there are no idle workers somehow
+							throw Error('Could not find an idle worker.');
+						}
+					}
+				} else if (this.isComplete()) {
+					if (this.completeResolve) {
+						this.completeResolve();
+						this.completePromise = undefined;
+						this.completeResolve = undefined;
+					}
+					this.exitAll();
 				}
 			}
 			/**
@@ -65,16 +107,6 @@ async function main() {
 				} else {
 					this.taskQueue.push({ dep, outDir });
 				}
-			}
-			/**
-			 * Waits for all tasks to complete before exiting.
-			 */
-			waitForCompletion() {
-				this.workers.forEach((worker) => {
-					worker.on('exit', () => {
-						this.processNextTask();
-					});
-				});
 			}
 		}
 		// Command line args
@@ -128,16 +160,15 @@ async function main() {
 		await Promise.all(
 			deps.map((dep) => {
 				workerPool.addTask(dep, outDir);
-				workerPool.waitForCompletion();
 			}),
 		);
+		await workerPool.allComplete();
 		console.timeEnd('Done in');
 		console.log(`Exported definitions to ${path.join(process.cwd(), outDir)}`);
 	} else {
 		/**
 		 * Code run in a worker thread
 		 */
-		const DEBUG = false;
 		// Definitions file starts with this string
 		const HEADER = `/** @noSelfInFile */
 /// <reference types="@typescript-to-lua/language-extensions" />
@@ -535,90 +566,100 @@ async function main() {
 			}
 			return definitions;
 		};
-		const { dep, outDir } = workerData;
-		const details = {
-			name: '', // We'll guess the name later
-			isLua: true,
-		};
-		// Fetch dependency zip file
-		const req = await fetch(dep);
-		if (!req.ok) {
-			console.error(`Failed to fetch dependency ${dep}`);
-			return;
-		}
-		// Get a node-specific buffer from the request
-		const zipBuffer = Buffer.from(await req.arrayBuffer());
-		// Unzip file into memory
-		const zip = new AdmZip(zipBuffer);
-		if (!zip.test()) {
-			console.error(`Zip archive damaged for ${dep}`);
-			return;
-		}
-		// Locate all files inside the zip
-		const files = zip.getEntries();
-		// If there's a C++ file, it's probably not a Lua module
-		files.some((entry) => {
-			if (entry.name.endsWith('.cpp')) {
-				details.isLua = false;
-				return true;
+		const workIsDone = () => parentPort?.postMessage('complete');
+		parentPort?.on('message', async (message) => {
+			const { dep, outDir } = message;
+			const details = {
+				name: '', // We'll guess the name later
+				isLua: true,
+			};
+			// Fetch dependency zip file
+			const req = await fetch(dep);
+			if (!req.ok) {
+				console.error(`Failed to fetch dependency ${dep}`);
+				workIsDone();
+				return;
 			}
-			return false;
+			// Get a node-specific buffer from the request
+			const zipBuffer = Buffer.from(await req.arrayBuffer());
+			// Unzip file into memory
+			const zip = new AdmZip(zipBuffer);
+			if (!zip.test()) {
+				console.error(`Zip archive damaged for ${dep}`);
+				workIsDone();
+				return;
+			}
+			// Locate all files inside the zip
+			const files = zip.getEntries();
+			// If there's a C++ file, it's probably not a Lua module
+			files.some((entry) => {
+				if (entry.name.endsWith('.cpp')) {
+					details.isLua = false;
+					return true;
+				}
+				return false;
+			});
+			// Attempt to locate a `script_api` file to parse
+			let api = [];
+			try {
+				api = files
+					.filter((entry) => entry.name.endsWith('.script_api'))
+					// Use a YAML parser to construction a JS object
+					.map((entry) => {
+						// Guess the name based on the script_api's filename
+						details.name = entry.name.split('.')[0];
+						return parse(entry.getData().toString('utf8'));
+					})[0];
+			} catch (e) {
+				console.error(e, dep);
+				workIsDone();
+				return;
+			}
+			// If we have no API to parse, exit early
+			if (!api || api.length === 0) {
+				workIsDone();
+				return;
+			}
+			// Make output directory
+			try {
+				await fs.promises.mkdir(path.join(process.cwd(), outDir));
+			} catch {
+				// Silence this error
+			}
+			// Debug: Export JSON of parsed YAML
+			if (DEBUG) {
+				try {
+					await fs.promises.writeFile(
+						path.join(process.cwd(), outDir, details.name + '.json'),
+						JSON.stringify(api),
+					);
+				} catch (e) {
+					console.error(e, dep);
+					workIsDone();
+					return;
+				}
+			}
+			// Turn our parsed object into definitions
+			const result = generateTypeScriptDefinitions(api, details);
+			if (result) {
+				// Guess the URL by including only the first 6 strings split by slash
+				const depUrl = dep.split('/').slice(0, 5).join('/');
+				// Append header
+				const final = `${HEADER}/**\n * @url ${depUrl}\n * @noResolution\n */\n${result}`;
+				// Save the definitions to file
+				try {
+					await fs.promises.writeFile(
+						path.join(process.cwd(), outDir, details.name + '.d.ts'),
+						final,
+					);
+				} catch (e) {
+					console.error(e, dep);
+					workIsDone();
+					return;
+				}
+			}
+			workIsDone();
 		});
-		// Attempt to locate a `script_api` file to parse
-		let api = [];
-		try {
-			api = files
-				.filter((entry) => entry.name.endsWith('.script_api'))
-				// Use a YAML parser to construction a JS object
-				.map((entry) => {
-					// Guess the name based on the script_api's filename
-					details.name = entry.name.split('.')[0];
-					return parse(entry.getData().toString('utf8'));
-				})[0];
-		} catch (e) {
-			console.error(e, dep);
-			return;
-		}
-		// If we have no API to parse, exit early
-		if (!api || api.length === 0) {
-			return;
-		}
-		// Make output directory
-		try {
-			await fs.promises.mkdir(path.join(process.cwd(), outDir));
-		} catch {
-			// Silence this error
-		}
-		// Debug: Export JSON of parsed YAML
-		if (DEBUG) {
-			try {
-				await fs.promises.writeFile(
-					path.join(process.cwd(), outDir, details.name + '.json'),
-					JSON.stringify(api),
-				);
-			} catch (e) {
-				console.error(e, dep);
-				return;
-			}
-		}
-		// Turn our parsed object into definitions
-		const result = generateTypeScriptDefinitions(api, details);
-		if (result) {
-			// Guess the URL by including only the first 6 strings split by slash
-			const depUrl = dep.split('/').slice(0, 5).join('/');
-			// Append header
-			const final = `${HEADER}/**\n * @url ${depUrl}\n * @noResolution\n */\n${result}`;
-			// Save the definitions to file
-			try {
-				await fs.promises.writeFile(
-					path.join(process.cwd(), outDir, details.name + '.d.ts'),
-					final,
-				);
-			} catch (e) {
-				console.error(e, dep);
-				return;
-			}
-		}
 	}
 }
 // Run the main function

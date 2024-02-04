@@ -9,7 +9,11 @@ import fetch from 'node-fetch';
 import { fileURLToPath } from 'url';
 import { parse } from 'yaml';
 import yargs from 'yargs';
-import { Worker, workerData, isMainThread } from 'worker_threads';
+import { Worker, parentPort, isMainThread } from 'worker_threads';
+
+const DEBUG = true;
+
+type TWorker = Worker & { isIdle: boolean };
 
 async function main() {
 	if (isMainThread) {
@@ -22,14 +26,40 @@ async function main() {
 		 * Manages a pool of worker threads for parallel processing.
 		 */
 		class WorkerPool {
-			private workers: Worker[] = [];
+			private workers: TWorker[] = [];
 			private taskQueue: { dep: string; outDir: string }[] = [];
 			private maxWorkers: number;
+			private completePromise?: Promise<void>;
+			private completeResolve?: () => void;
+			private isComplete(): boolean {
+				return (
+					this.taskQueue.length === 0 &&
+					this.workers.every((worker) => worker.isIdle)
+				);
+			}
+			private exitAll(): void {
+				this.workers.forEach((worker) => worker.terminate());
+			}
+
+			/**
+			 * Returns a promise that resolves when all work is done.
+			 */
+			public async allComplete(): Promise<void> {
+				if (this.isComplete()) {
+					return Promise.resolve();
+				}
+
+				if (!this.completePromise) {
+					this.completePromise = new Promise<void>((resolve) => {
+						this.completeResolve = resolve;
+					});
+				}
+
+				return this.completePromise;
+			}
 
 			/**
 			 * Creates a new WorkerPool instance.
-			 *
-			 * @param maxWorkers - The maximum number of worker threads in the pool.
 			 */
 			constructor(maxWorkers: number) {
 				this.maxWorkers = maxWorkers;
@@ -39,22 +69,26 @@ async function main() {
 			 * Creates a worker thread for processing a specific file with given options.
 			 */
 			private createWorker(dep: string, outDir: string): void {
-				const worker = new Worker(fileURLToPath(import.meta.url), {
-					workerData: { dep, outDir },
-				});
+				const worker = new Worker(fileURLToPath(import.meta.url)) as TWorker;
 
-				// Listen for messages and errors from the worker
-				worker.on('message', (message) => {
-					console.log(message);
+				worker.postMessage({ dep, outDir });
+				worker.isIdle = false;
+
+				worker.on('message', () => {
+					worker.isIdle = true;
 					this.processNextTask();
 				});
 
 				worker.on('error', (err) => {
 					console.error(`Error in worker for file ${dep}:`, err);
+					worker.isIdle = true;
 					this.processNextTask();
 				});
 
 				this.workers.push(worker);
+				if (DEBUG) {
+					console.log(`Creating worker #${this.workers.length}`);
+				}
 			}
 
 			/**
@@ -63,7 +97,24 @@ async function main() {
 			private processNextTask(): void {
 				const nextTask = this.taskQueue.shift();
 				if (nextTask) {
-					this.createWorker(nextTask.dep, nextTask.outDir);
+					if (this.workers.length < this.maxWorkers) {
+						this.createWorker(nextTask.dep, nextTask.outDir);
+					} else {
+						const worker = this.workers.find((w) => w.isIdle);
+						if (worker) {
+							worker.postMessage(nextTask);
+						} else {
+							// Something went wrong, there are no idle workers somehow
+							throw Error('Could not find an idle worker.');
+						}
+					}
+				} else if (this.isComplete()) {
+					if (this.completeResolve) {
+						this.completeResolve();
+						this.completePromise = undefined;
+						this.completeResolve = undefined;
+					}
+					this.exitAll();
 				}
 			}
 
@@ -76,17 +127,6 @@ async function main() {
 				} else {
 					this.taskQueue.push({ dep, outDir });
 				}
-			}
-
-			/**
-			 * Waits for all tasks to complete before exiting.
-			 */
-			public waitForCompletion(): void {
-				this.workers.forEach((worker) => {
-					worker.on('exit', () => {
-						this.processNextTask();
-					});
-				});
 			}
 		}
 
@@ -149,9 +189,10 @@ async function main() {
 		await Promise.all(
 			deps.map((dep) => {
 				workerPool.addTask(dep, outDir);
-				workerPool.waitForCompletion();
 			}),
 		);
+
+		await workerPool.allComplete();
 
 		console.timeEnd('Done in');
 		console.log(`Exported definitions to ${path.join(process.cwd(), outDir)}`);
@@ -160,7 +201,6 @@ async function main() {
 		 * Code run in a worker thread
 		 */
 
-		const DEBUG = false;
 		// Definitions file starts with this string
 		const HEADER = `/** @noSelfInFile */
 /// <reference types="@typescript-to-lua/language-extensions" />
@@ -642,104 +682,118 @@ async function main() {
 			return definitions;
 		};
 
-		const { dep, outDir } = workerData;
+		const workIsDone = () => parentPort?.postMessage('complete');
 
-		const details = {
-			name: '', // We'll guess the name later
-			isLua: true,
-		};
+		parentPort?.on(
+			'message',
+			async (message: { dep: string; outDir: string }) => {
+				const { dep, outDir } = message;
 
-		// Fetch dependency zip file
-		const req = await fetch(dep);
-		if (!req.ok) {
-			console.error(`Failed to fetch dependency ${dep}`);
-			return;
-		}
+				const details = {
+					name: '', // We'll guess the name later
+					isLua: true,
+				};
 
-		// Get a node-specific buffer from the request
-		const zipBuffer = Buffer.from(await req.arrayBuffer());
+				// Fetch dependency zip file
+				const req = await fetch(dep);
+				if (!req.ok) {
+					console.error(`Failed to fetch dependency ${dep}`);
+					workIsDone();
+					return;
+				}
 
-		// Unzip file into memory
-		const zip = new AdmZip(zipBuffer);
-		if (!zip.test()) {
-			console.error(`Zip archive damaged for ${dep}`);
-			return;
-		}
+				// Get a node-specific buffer from the request
+				const zipBuffer = Buffer.from(await req.arrayBuffer());
 
-		// Locate all files inside the zip
-		const files = zip.getEntries();
+				// Unzip file into memory
+				const zip = new AdmZip(zipBuffer);
+				if (!zip.test()) {
+					console.error(`Zip archive damaged for ${dep}`);
+					workIsDone();
+					return;
+				}
 
-		// If there's a C++ file, it's probably not a Lua module
-		files.some((entry) => {
-			if (entry.name.endsWith('.cpp')) {
-				details.isLua = false;
-				return true;
-			}
-			return false;
-		});
+				// Locate all files inside the zip
+				const files = zip.getEntries();
 
-		// Attempt to locate a `script_api` file to parse
-		let api: ScriptApi = [];
-		try {
-			api = files
-				.filter((entry) => entry.name.endsWith('.script_api'))
-				// Use a YAML parser to construction a JS object
-				.map<ScriptApi>((entry) => {
-					// Guess the name based on the script_api's filename
-					details.name = entry.name.split('.')[0];
-					return parse(entry.getData().toString('utf8'));
-				})[0];
-		} catch (e) {
-			console.error(e, dep);
-			return;
-		}
+				// If there's a C++ file, it's probably not a Lua module
+				files.some((entry) => {
+					if (entry.name.endsWith('.cpp')) {
+						details.isLua = false;
+						return true;
+					}
+					return false;
+				});
 
-		// If we have no API to parse, exit early
-		if (!api || api.length === 0) {
-			return;
-		}
+				// Attempt to locate a `script_api` file to parse
+				let api: ScriptApi = [];
+				try {
+					api = files
+						.filter((entry) => entry.name.endsWith('.script_api'))
+						// Use a YAML parser to construction a JS object
+						.map<ScriptApi>((entry) => {
+							// Guess the name based on the script_api's filename
+							details.name = entry.name.split('.')[0];
+							return parse(entry.getData().toString('utf8'));
+						})[0];
+				} catch (e) {
+					console.error(e, dep);
+					workIsDone();
+					return;
+				}
 
-		// Make output directory
-		try {
-			await fs.promises.mkdir(path.join(process.cwd(), outDir));
-		} catch {
-			// Silence this error
-		}
+				// If we have no API to parse, exit early
+				if (!api || api.length === 0) {
+					workIsDone();
+					return;
+				}
 
-		// Debug: Export JSON of parsed YAML
-		if (DEBUG) {
-			try {
-				await fs.promises.writeFile(
-					path.join(process.cwd(), outDir, details.name + '.json'),
-					JSON.stringify(api),
-				);
-			} catch (e) {
-				console.error(e, dep);
-				return;
-			}
-		}
+				// Make output directory
+				try {
+					await fs.promises.mkdir(path.join(process.cwd(), outDir));
+				} catch {
+					// Silence this error
+				}
 
-		// Turn our parsed object into definitions
-		const result = generateTypeScriptDefinitions(api, details);
+				// Debug: Export JSON of parsed YAML
+				if (DEBUG) {
+					try {
+						await fs.promises.writeFile(
+							path.join(process.cwd(), outDir, details.name + '.json'),
+							JSON.stringify(api),
+						);
+					} catch (e) {
+						console.error(e, dep);
+						workIsDone();
+						return;
+					}
+				}
 
-		if (result) {
-			// Guess the URL by including only the first 6 strings split by slash
-			const depUrl = dep.split('/').slice(0, 5).join('/');
+				// Turn our parsed object into definitions
+				const result = generateTypeScriptDefinitions(api, details);
 
-			// Append header
-			const final = `${HEADER}/**\n * @url ${depUrl}\n * @noResolution\n */\n${result}`;
+				if (result) {
+					// Guess the URL by including only the first 6 strings split by slash
+					const depUrl = dep.split('/').slice(0, 5).join('/');
 
-			// Save the definitions to file
-			try {
-				await fs.promises.writeFile(
-					path.join(process.cwd(), outDir, details.name + '.d.ts'),
-					final,
-				);
-			} catch (e) {
-				console.error(e, dep);
-				return;
-			}
-		}
+					// Append header
+					const final = `${HEADER}/**\n * @url ${depUrl}\n * @noResolution\n */\n${result}`;
+
+					// Save the definitions to file
+					try {
+						await fs.promises.writeFile(
+							path.join(process.cwd(), outDir, details.name + '.d.ts'),
+							final,
+						);
+					} catch (e) {
+						console.error(e, dep);
+						workIsDone();
+						return;
+					}
+				}
+				workIsDone();
+			},
+		);
 	}
 }
 
