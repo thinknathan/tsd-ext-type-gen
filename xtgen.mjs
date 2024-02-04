@@ -268,7 +268,7 @@ function isApiFunc(entry) {
 }
 // Sanitizes name
 function getName(name, isParam) {
-	let modifiedName = name;
+	let modifiedName = String(name);
 	// Check against the reserved keywords in TypeScript
 	if (INVALID_NAMES.includes(modifiedName)) {
 		modifiedName = modifiedName + '_';
@@ -312,7 +312,7 @@ function getType(type, context) {
 	return defaultType;
 }
 function sanitizeForComment(str) {
-	return str.replace(/\*\//g, '');
+	return str.replace(/\*\//g, '*\\/');
 }
 // Transforms and sanitizes descriptions
 function getComments(entry) {
@@ -487,7 +487,7 @@ function generateTypeScriptDefinitions(api, details) {
 	const namespaces = {};
 	api.forEach((entry) => {
 		// Handle nested properties
-		if (entry.name && entry.name.includes('.')) {
+		if (typeof entry.name === 'string' && entry.name.includes('.')) {
 			const namePieces = entry.name.split('.');
 			const entryNamespace = namePieces[0];
 			const entryName = namePieces[1];
