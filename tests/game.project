@@ -23,3 +23,5 @@ dependencies#16 = https://github.com/thinknathan/def-setv/archive/refs/tags/v1.0
 dependencies#17 = https://github.com/thinknathan/defold-estring/archive/refs/tags/v2.0.1.zip
 dependencies#18 = https://github.com/thinknathan/defold-etable/archive/refs/tags/v1.0.1.zip
 dependencies#19 = https://github.com/thinknathan/defold-prng/archive/refs/tags/v1.0.2.zip
+dependencies#20 = https://github.com/britzl/defold-clipboard/archive/refs/tags/1.24.0.zip
+dependencies#21 = https://github.com/defold/extension-poki-sdk/archive/refs/tags/1.5.0.zip
