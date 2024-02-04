@@ -267,15 +267,18 @@ function isApiFunc(entry) {
 	);
 }
 // Sanitizes name
-function getName(name) {
-	// Special case: arguments
-	let modifiedName = name.replace(/^\.\.\.$/, 'args');
+function getName(name, isParam) {
+	let modifiedName = name;
 	// Check against the reserved keywords in TypeScript
 	if (INVALID_NAMES.includes(modifiedName)) {
 		modifiedName = modifiedName + '_';
 	}
-	// Special case: Lua's `self` variable
-	modifiedName = modifiedName.replace(/^self$/, 'this');
+	if (isParam) {
+		// Special case: arguments
+		modifiedName = modifiedName.replace(/^\.\.\.$/, 'args');
+		// Special case: Lua's `self` variable
+		modifiedName = modifiedName.replace(/^self$/, 'this');
+	}
 	// Sanitize type name, allow alpha-numeric and underscore
 	modifiedName = modifiedName.replace(/[^a-zA-Z0-9_$]/g, '_');
 	if (modifiedName !== name) {
@@ -357,7 +360,7 @@ function getReturnComments(returnObj, newDesc) {
 }
 function getParamComments(parameters, newDesc) {
 	parameters.forEach((param) => {
-		const name = param.name ? getName(param.name) : '';
+		const name = param.name ? getName(param.name, true) : '';
 		if (name) {
 			newDesc += `\n * @param`;
 			if (param.type) {
@@ -403,7 +406,7 @@ function getExampleComments(examples, newDesc) {
 // Main Functions
 // Function to generate TypeScript definitions for ScriptApiTable
 function generateTableDefinition(entry, details, start = false) {
-	const name = entry.name ? getName(entry.name) : DEFAULT_NAME_IF_BLANK;
+	const name = entry.name ? getName(entry.name, false) : DEFAULT_NAME_IF_BLANK;
 	let tableDeclaration = `export namespace ${name} {\n`;
 	if (start) {
 		tableDeclaration = details.isLua
@@ -426,12 +429,14 @@ function generateFunctionDefinition(entry, isParam) {
 		return `(${parameters}) => ${returnType}`;
 	} else {
 		const comment = getComments(entry);
-		const name = entry.name ? getName(entry.name) : DEFAULT_NAME_IF_BLANK;
+		const name = entry.name
+			? getName(entry.name, false)
+			: DEFAULT_NAME_IF_BLANK;
 		return `${comment}export function ${name}(${parameters}): ${returnType};\n`;
 	}
 }
 function getParameterDefinition(param) {
-	const name = param.name ? getName(param.name) : DEFAULT_NAME_IF_BLANK;
+	const name = param.name ? getName(param.name, true) : DEFAULT_NAME_IF_BLANK;
 	const optional = param.optional ? '?' : '';
 	let type = getType(param.type, 'param');
 	if (type === KNOWN_TYPES['FUNCTION']) {
@@ -465,7 +470,7 @@ function getReturnType(returnObj) {
 }
 // Function to generate TypeScript definitions for ScriptApiEntry
 function generateEntryDefinition(entry) {
-	const name = entry.name ? getName(entry.name) : DEFAULT_NAME_IF_BLANK;
+	const name = entry.name ? getName(entry.name, false) : DEFAULT_NAME_IF_BLANK;
 	const varType = isAllUppercase(name) ? 'const' : 'let';
 	const type = getType(entry.type, 'return');
 	const comment = getComments(entry);
