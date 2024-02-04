@@ -310,15 +310,24 @@ function getName(name: string, isParam: boolean) {
 	if (INVALID_NAMES.includes(modifiedName)) {
 		modifiedName = modifiedName + '_';
 	}
+
 	if (isParam) {
 		// Special case: arguments
 		modifiedName = modifiedName.replace(/^\.\.\.$/, 'args');
 		// Special case: Lua's `self` variable
 		modifiedName = modifiedName.replace(/^self$/, 'this');
 	}
-	// Sanitize type name, allow alpha-numeric and underscore
+
+	// Sanitize type name: allow only alpha-numeric, underscore, dollar sign
 	modifiedName = modifiedName.replace(/[^a-zA-Z0-9_$]/g, '_');
-	if (modifiedName !== name) {
+
+	// If the first character is a number, add a dollar sign to start
+	if (/^\d/.test(modifiedName)) {
+		modifiedName = '$' + modifiedName;
+	}
+
+	// If we're modifying a function name, not a parameter, give a warning
+	if (!isParam && modifiedName !== name) {
 		console.warn(`Modifying invalid name "${name}" to "${modifiedName}"`);
 	}
 
