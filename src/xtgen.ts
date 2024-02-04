@@ -135,20 +135,23 @@ async function main() {
 		}
 
 		let numCores = 1;
-		// try {
-		// 	numCores = os.cpus().length;
-		// } catch (err) {
-		// 	console.error(err);
-		// }
-		// numCores = Math.min(numCores, deps.length); // Max #deps
-		// numCores = Math.max(numCores - 1, 1); // Min 1
+		try {
+			numCores = os.cpus().length;
+		} catch (err) {
+			console.error(err);
+		}
+		numCores = Math.min(numCores, deps.length); // Max #deps
+		numCores = Math.max(numCores - 1, 1); // Min 1
 
 		const workerPool = new WorkerPool(numCores);
 
 		// Iterate over each dependency
-		await Promise.all(deps.map(async (dep) => workerPool.addTask(dep, outDir)));
-
-		workerPool.waitForCompletion();
+		await Promise.all(
+			deps.map((dep) => {
+				workerPool.addTask(dep, outDir);
+				workerPool.waitForCompletion();
+			}),
+		);
 
 		console.timeEnd('Done in');
 		console.log(`Exported definitions to ${path.join(process.cwd(), outDir)}`);
