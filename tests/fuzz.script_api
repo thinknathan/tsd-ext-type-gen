@@ -1,39 +1,78 @@
-- name: "Fuzz!ngExtens!on"
-  type: "t@ble"
-  desc: "Extension for Fuzz!ng JavaScript Code"
+- name: Fuzz!ngExtens!on
+  type: t@ble
+  desc: Extension for Fuzz!ng JavaScript Code
   members:
-    - name: "fuzzC*de"
-      type: "function"
-      desc: "Fuzzes the provided JavaScript code."
+    - name: fuzzC*de
+      type: function
+      desc: Fuzzes the provided JavaScript code.
       parameters:
-        - name: "c*de"
-          type: "str!ng"
-          desc: "The JavaScript code to be fuzzed. Must be a valid str!ng."
+        - name: ...
+          desc: The JavaScript code to be fuzzed.
       returns:
-        - name: "fuzz?dC*de"
-          type: "s*ring"
-          desc: "The fuzzed JavaScript code."
+        - name: fuzz?dC*de
+          type: s*ring
+          desc: The fuzzed JavaScript code.
       examples:
-        - desc: "Fuzz!ng a sample JavaScript code"
-
-    - name: "/*gen&rate!nval!dInput"
-      type: "function"
-      desc: "Generates an !nval!d JavaScript !nput for test!ng."
+        - desc: Fuzz!ng a sample JavaScript code
+    - name: /*gen&rate!nval!dInput
+      type: function
+      desc: Generates an !nval!d JavaScript !nput for test!ng.
       parameters:
-        - name: "//c*de"
-          type: "str!ng|n&mber|h@sh"
-          desc: "Optional JavaScript code to be fuzzed. Must be a valid str!ng."
-        - name: "t3+st"
-          type: "s=r!ng"
-        - name: "f%zz"
-          type: "str&ng"
-          desc: "/* */ //"
+        - name: self
+          type: any
+        - name: //c*de
+          type: str!ng|n&mber|h@sh
+          desc: Optional JavaScript code to be fuzzed!
+        - name: t3+st
+          type: s=r!ng
+        - name: f%zz
+          type: str&ng
+          desc: /* */ //
       returns:
-        - name: "!nval!dInput"
-          type: "st.r!ng"
-          desc: "The generated !nval!d JavaScript !nput."
+        - name: '!nval!dInput'
+          type: st.r!ng
+          desc: The generated !nval!d JavaScript !nput.
       examples:
-        - desc: "Generating !nval!d JavaScript input"
-
-    - name: "/*C&NST@NT"
-      type: "f#nct!on"
+        - desc: Generating !nval!d JavaScript input
+    - name: /*C&NST@NT
+      type: f#nct!on
+    - name: 1invalid
+    - name: class
+    - name: const
+    - name: break
+    - name: let's_try_this
+    - name: 123_variable
+    - name: true
+    - name: false
+    - name: function
+    - name: typeof
+    - name: undefined
+    - name: for
+    - name: in
+    - name: instanceof
+    - name: switch
+    - name: case
+    - name: try
+    - name: catch
+    - name: throw
+    - name: package
+    - name: private
+    - name: protected
+    - name: public
+    - name: return
+    - name: static
+    - name: super
+    - name: this
+    - name: while
+    - name: with
+    - name: yield
+    - name: delete
+    - name: debugger
+    - name: else
+    - name: enum
+    - name: export
+    - name: extends
+    - name: finally
+    - name: if
+    - name: implements
+    - name: import
