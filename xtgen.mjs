@@ -26,8 +26,12 @@ async function main() {
 					this.workers.every((worker) => worker.isIdle)
 				);
 			}
+			/**
+			 * Terminate all workers in the pool.
+			 */
 			exitAll() {
 				this.workers.forEach((worker) => worker.terminate());
+				this.workers = [];
 			}
 			/**
 			 * Returns a promise that resolves when all work is done.
@@ -56,8 +60,8 @@ async function main() {
 			 */
 			createWorker(dep, outDir) {
 				const worker = new Worker(fileURLToPath(import.meta.url));
-				worker.postMessage({ dep, outDir });
 				worker.isIdle = false;
+				worker.postMessage({ dep, outDir });
 				worker.on('message', () => {
 					worker.isIdle = true;
 					this.processNextTask();
@@ -83,19 +87,17 @@ async function main() {
 					} else {
 						const worker = this.workers.find((w) => w.isIdle);
 						if (worker) {
+							worker.isIdle = false;
 							worker.postMessage(nextTask);
 						} else {
 							// Something went wrong, there are no idle workers somehow
 							throw Error('Could not find an idle worker.');
 						}
 					}
-				} else if (this.isComplete()) {
-					if (this.completeResolve) {
-						this.completeResolve();
-						this.completePromise = undefined;
-						this.completeResolve = undefined;
-					}
-					this.exitAll();
+				} else if (this.isComplete() && this.completeResolve) {
+					this.completeResolve();
+					this.completePromise = undefined;
+					this.completeResolve = undefined;
 				}
 			}
 			/**
@@ -153,16 +155,13 @@ async function main() {
 		} catch (err) {
 			console.error(err);
 		}
-		numCores = Math.min(numCores, deps.length); // Max #deps
 		numCores = Math.max(numCores - 1, 1); // Min 1
+		numCores = Math.min(numCores, 32); // Max 32
 		const workerPool = new WorkerPool(numCores);
 		// Iterate over each dependency
-		await Promise.all(
-			deps.map((dep) => {
-				workerPool.addTask(dep, outDir);
-			}),
-		);
+		deps.forEach((dep) => workerPool.addTask(dep, outDir));
 		await workerPool.allComplete();
+		workerPool.exitAll();
 		console.timeEnd('Done in');
 		console.log(`Exported definitions to ${path.join(process.cwd(), outDir)}`);
 	} else {
