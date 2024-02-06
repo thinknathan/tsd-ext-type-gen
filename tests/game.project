@@ -27,3 +27,5 @@ dependencies#20 = https://github.com/britzl/defold-clipboard/archive/refs/tags/1
 dependencies#21 = https://github.com/defold/extension-poki-sdk/archive/refs/tags/1.5.0.zip
 dependencies#22 = https://github.com/thinknathan/extension-vibrate/archive/master.zip
 dependencies#23 = https://github.com/thinknathan/def_taptic_engine/archive/master.zip
+dependencies#24 = https://github.com/Lerg/extension-sfmtrandom/archive/main.zip
+dependencies#25 = https://github.com/Lerg/extension-pcgrandom/archive/main.zip
