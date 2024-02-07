@@ -270,7 +270,7 @@ async function main() {
 			}
 
 			// Turn our parsed object into definitions
-			const result = generateTypeScriptDefinitions(api, details);
+			const result = generateTypeScriptDefinitions(api, details, true);
 
 			if (result) {
 				// Guess the URL by including only the first 6 strings split by slash
@@ -301,7 +301,7 @@ async function main() {
 
 // Check if a string is all uppercase with optional underscores
 function isAllUppercase(str: string): boolean {
-	return /^[A-Z_]+$/.test(str);
+	return /^[A-Z0-9_]+$/.test(str);
 }
 
 // Check type of API entry
@@ -325,14 +325,14 @@ function isApiFunc(
 	);
 }
 
+function isNameInvalid(name: string) {
+	name = String(name);
+	return INVALID_NAMES.includes(name);
+}
+
 // Sanitizes name
 function getName(name: string, isParam: boolean) {
 	let modifiedName = String(name);
-
-	// Check against the reserved keywords in TypeScript
-	if (INVALID_NAMES.includes(modifiedName)) {
-		modifiedName = modifiedName + '_';
-	}
 
 	if (isParam) {
 		// Special case: arguments
@@ -351,7 +351,14 @@ function getName(name: string, isParam: boolean) {
 
 	// If we're modifying a function name, not a parameter, give a warning
 	if (!isParam && modifiedName !== name) {
-		console.warn(`Modifying invalid name "${name}" to "${modifiedName}"`);
+		console.warn(
+			`Modifying invalid ${typeof name} "${name}" to "${modifiedName}"`,
+		);
+	}
+
+	// Check against the reserved keywords in TypeScript
+	if (isNameInvalid(modifiedName)) {
+		modifiedName = modifiedName + '_';
 	}
 
 	return modifiedName;
@@ -383,6 +390,20 @@ function getType(
 
 function sanitizeForComment(str: string) {
 	return str.replace(/\*\//g, '*\\/');
+}
+
+/**
+ * @param name the original, unsanitized name
+ * @param root
+ */
+function getDeclarationKeyword(name: string, root: boolean) {
+	if (root) {
+		return 'declare';
+	} else if (isNameInvalid(name)) {
+		return '';
+	} else {
+		return 'export';
+	}
 }
 
 // Transforms and sanitizes descriptions
@@ -496,26 +517,41 @@ function getExampleComments(examples: ScriptApiExample[], newDesc: string) {
 	return newDesc;
 }
 
+/**
+ * @param name must be the original, unsanitized name
+ * @param isParam
+ */
+function getExportOverride(name: string, isParam: boolean) {
+	if (isNameInvalid(name)) {
+		return `export {${getName(name, isParam)} as ${name}}`;
+	} else {
+		return '';
+	}
+}
+
 // Main Functions
 
 // Function to generate TypeScript definitions for ScriptApiTable
 function generateTableDefinition(
 	entry: ScriptApiTable,
 	details: ScriptDetails,
-	start = false,
+	root: boolean,
 ): string {
+	const declaration = getDeclarationKeyword(entry.name ?? '', root);
+	const override = entry.name ? getExportOverride(entry.name, false) : '';
 	const name = entry.name ? getName(entry.name, false) : DEFAULT_NAME_IF_BLANK;
-	let tableDeclaration = `export namespace ${name} {\n`;
-	if (start) {
+
+	let tableDeclaration = `${declaration ? declaration + ' ' : ''}namespace ${name} {\n`;
+	if (root) {
 		tableDeclaration = details.isLua
-			? `declare module '${name}.${name}' {\n`
-			: `declare namespace ${name} {\n`;
+			? `${declaration} module '${name}.${name}' {\n`
+			: `${declaration} namespace ${name} {\n`;
 	}
 
 	if (entry.members && Array.isArray(entry.members)) {
-		return `${tableDeclaration}${generateTypeScriptDefinitions(entry.members, details)}}`;
+		return `${tableDeclaration}${generateTypeScriptDefinitions(entry.members, details, false)}}${override ? override + ';\n' : ''}`;
 	} else {
-		return `${tableDeclaration}}`;
+		return `${tableDeclaration}}${override ? override + ';\n' : ''}`;
 	}
 }
 
@@ -523,6 +559,7 @@ function generateTableDefinition(
 function generateFunctionDefinition(
 	entry: ScriptApiFunction,
 	isParam: boolean,
+	root: boolean,
 ): string {
 	const parameters = entry.parameters
 		? entry.parameters.map(getParameterDefinition).join(', ')
@@ -533,10 +570,12 @@ function generateFunctionDefinition(
 		return `(${parameters}) => ${returnType}`;
 	} else {
 		const comment = getComments(entry);
+		const declaration = getDeclarationKeyword(entry.name ?? '', root);
+		const override = entry.name ? getExportOverride(entry.name, isParam) : '';
 		const name = entry.name
 			? getName(entry.name, false)
 			: DEFAULT_NAME_IF_BLANK;
-		return `${comment}export function ${name}(${parameters}): ${returnType};\n`;
+		return `${comment}${declaration ? declaration + ' ' : ''}function ${name}(${parameters}): ${returnType};\n${override ? override + ';\n' : ''}`;
 	}
 }
 
@@ -547,7 +586,7 @@ function getParameterDefinition(param: ScriptApiParameter): string {
 
 	if (type === KNOWN_TYPES['FUNCTION']) {
 		// Get a more specific function signature
-		type = generateFunctionDefinition(param, true);
+		type = generateFunctionDefinition(param, true, false);
 	} else if (
 		type === KNOWN_TYPES['TABLE'] &&
 		param.fields &&
@@ -580,18 +619,21 @@ function getReturnType(
 }
 
 // Function to generate TypeScript definitions for ScriptApiEntry
-function generateEntryDefinition(entry: ScriptApiEntry): string {
+function generateEntryDefinition(entry: ScriptApiEntry, root: boolean): string {
+	const declaration = getDeclarationKeyword(entry.name ?? '', root);
+	const override = entry.name ? getExportOverride(entry.name, false) : '';
 	const name = entry.name ? getName(entry.name, false) : DEFAULT_NAME_IF_BLANK;
 	const varType = isAllUppercase(name) ? 'const' : 'let';
 	const type = getType(entry.type, 'return');
 	const comment = getComments(entry);
-	return `${comment}export ${varType} ${name}: ${type};\n`;
+	return `${comment}${declaration ? declaration + ' ' : ''}${varType} ${name}: ${type};\n${override ? override + ';\n' : ''}`;
 }
 
 // Main function to generate TypeScript definitions for ScriptApi
 function generateTypeScriptDefinitions(
 	api: ScriptApi,
 	details: ScriptDetails,
+	root: boolean,
 ): string {
 	let definitions = '';
 
@@ -611,15 +653,11 @@ function generateTypeScriptDefinitions(
 			entry.name = entryName;
 			namespaces[entryNamespace].push(entry);
 		} else if (isApiTable(entry)) {
-			definitions += generateTableDefinition(
-				entry,
-				details,
-				definitions === '',
-			);
+			definitions += generateTableDefinition(entry, details, root);
 		} else if (isApiFunc(entry)) {
-			definitions += generateFunctionDefinition(entry, false);
+			definitions += generateFunctionDefinition(entry, false, root);
 		} else {
-			definitions += generateEntryDefinition(entry);
+			definitions += generateEntryDefinition(entry, root);
 		}
 	});
 
@@ -628,16 +666,16 @@ function generateTypeScriptDefinitions(
 		if (Object.prototype.hasOwnProperty.call(namespaces, namespace)) {
 			const namespaceEntries = namespaces[namespace];
 
-			definitions += `export namespace ${namespace} {\n`;
+			definitions += `${root ? 'declare' : 'export'} namespace ${namespace} {\n`;
 
 			// Loop through entries within the namespace
 			namespaceEntries.forEach((entry) => {
 				if (isApiTable(entry)) {
-					definitions += generateTableDefinition(entry, details);
+					definitions += generateTableDefinition(entry, details, false);
 				} else if (isApiFunc(entry)) {
-					definitions += generateFunctionDefinition(entry, false);
+					definitions += generateFunctionDefinition(entry, false, false);
 				} else {
-					definitions += generateEntryDefinition(entry);
+					definitions += generateEntryDefinition(entry, false);
 				}
 			});
 
