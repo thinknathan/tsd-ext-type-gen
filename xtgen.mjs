@@ -186,6 +186,26 @@ async function main() {
 				}
 				return false;
 			});
+			let depFilename = '';
+			try {
+				const depUrl = dep.split('/');
+				if (depUrl.length > 0) {
+					depFilename = depUrl[depUrl.length - 1];
+					const lastPeriodIndex = depFilename.lastIndexOf('.');
+					if (lastPeriodIndex !== -1) {
+						depFilename = depFilename.substring(0, lastPeriodIndex);
+					}
+				}
+				// Remove special characters
+				depFilename = depFilename.replace(/[^a-zA-Z0-9_.]/g, '');
+				// Shorten if the name is much too long
+				if (depFilename.length > 64) {
+					depFilename = depFilename.substring(0, 64);
+				}
+			} catch {
+				// Silence error
+				depFilename = '';
+			}
 			// Attempt to locate a `script_api` file to parse
 			let api = [];
 			try {
@@ -194,7 +214,9 @@ async function main() {
 					// Use a YAML parser to construction a JS object
 					.map((entry) => {
 						// Guess the name based on the script_api's filename
-						details.name = entry.name.split('.')[0];
+						details.name =
+							entry.name.split('.')[0] +
+							`${depFilename ? '_' + depFilename : ''}`;
 						return parse(entry.getData().toString('utf8'));
 					})[0];
 			} catch (e) {
