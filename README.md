@@ -13,9 +13,9 @@ This tool searches through dependencies in your Defold project file, then attemp
 1. Get this package from Github
 
 ```bash
-yarn add git+https://git@github.com/thinknathan/tsd-ext-type-gen.git#^1.0.0 -D
+yarn add tsd-ext-type-gen -D
 # or
-npm install git+https://git@github.com/thinknathan/tsd-ext-type-gen.git#^1.0.0 --save-dev
+npm install tsd-ext-type-gen --save-dev
 ```
 
 ## Usage
