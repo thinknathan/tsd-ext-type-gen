@@ -10,8 +10,6 @@ This tool searches through dependencies in your Defold project file, then attemp
 
 ## Installation
 
-1. Get this package from Github
-
 ```bash
 yarn add tsd-ext-type-gen -D
 # or
