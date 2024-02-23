@@ -50,7 +50,6 @@ const INVALID_NAMES = [
 	'static',
 	'super',
 	'switch',
-	'this',
 	'throw',
 	'true',
 	'try',
@@ -288,9 +287,13 @@ function isApiFunc(entry) {
 		'parameters' in entry
 	);
 }
-function isNameInvalid(name) {
+function isNameInvalid(name, isParam) {
 	name = String(name);
-	return INVALID_NAMES.includes(name);
+	if (isParam) {
+		return INVALID_NAMES.includes(name);
+	} else {
+		return ['this'].concat(INVALID_NAMES).includes(name);
+	}
 }
 // Sanitizes name
 function getName(name, isParam) {
@@ -314,7 +317,7 @@ function getName(name, isParam) {
 		);
 	}
 	// Check against the reserved keywords in TypeScript
-	if (isNameInvalid(modifiedName)) {
+	if (isNameInvalid(modifiedName, isParam)) {
 		modifiedName = modifiedName + '_';
 	}
 	return modifiedName;
@@ -349,7 +352,7 @@ function sanitizeForComment(str) {
 function getDeclarationKeyword(name, root) {
 	if (root) {
 		return 'declare';
-	} else if (isNameInvalid(name)) {
+	} else if (isNameInvalid(name, false)) {
 		return '';
 	} else {
 		return 'export';
@@ -454,7 +457,7 @@ function getExampleComments(examples, newDesc) {
  * @param isParam
  */
 function getExportOverride(name, isParam) {
-	if (isNameInvalid(name)) {
+	if (isNameInvalid(name, isParam)) {
 		return `export {${getName(name, isParam)} as ${name}}`;
 	} else {
 		return '';
