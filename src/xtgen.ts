@@ -9,6 +9,7 @@ import { parse } from 'yaml';
 import yargs from 'yargs';
 
 const DEBUG = false;
+
 // Definitions file starts with this string
 const HEADER = `/** @noSelfInFile */
 /// <reference types="@typescript-to-lua/language-extensions" />
@@ -226,67 +227,77 @@ async function main() {
 			}
 
 			// Attempt to locate a `script_api` file to parse
-			let api: ScriptApi = [];
+			const apis: { [key: string]: ScriptApi } = {};
 			try {
-				api = files
+				files
 					.filter((entry) => entry.name.endsWith('.script_api'))
 					// Use a YAML parser to construction a JS object
-					.map<ScriptApi>((entry) => {
+					.forEach((entry) => {
 						// Guess the name based on the script_api's filename
-						details.name =
+						apis[
 							entry.name.split('.')[0] +
-							`${depFilename ? '_' + depFilename : ''}`;
-						return parse(entry.getData().toString('utf8'));
-					})[0];
+								`${depFilename ? '_' + depFilename : ''}`
+						] = parse(entry.getData().toString('utf8'));
+					});
 			} catch (e) {
 				console.error(e, dep);
 				return;
 			}
 
-			// If we have no API to parse, exit early
-			if (!api || api.length === 0) {
-				return;
-			}
+			for (const key in apis) {
+				if (Object.prototype.hasOwnProperty.call(apis, key)) {
+					// Set name according to key
+					details.name = key;
 
-			// Make output directory
-			try {
-				await fs.promises.mkdir(path.join(process.cwd(), outDir));
-			} catch {
-				// Silence this error
-			}
+					// Start processing api
+					const api = apis[key];
 
-			// Debug: Export JSON of parsed YAML
-			if (DEBUG) {
-				try {
-					await fs.promises.writeFile(
-						path.join(process.cwd(), outDir, details.name + '.json'),
-						JSON.stringify(api),
-					);
-				} catch (e) {
-					console.error(e, dep);
-					return;
-				}
-			}
+					// If we have no API to parse, exit early
+					if (!api || api.length === 0) {
+						return;
+					}
 
-			// Turn our parsed object into definitions
-			const result = generateTypeScriptDefinitions(api, details, true);
+					// Make output directory
+					try {
+						await fs.promises.mkdir(path.join(process.cwd(), outDir));
+					} catch {
+						// Silence this error
+					}
 
-			if (result) {
-				// Guess the URL by including only the first 6 strings split by slash
-				const depUrl = dep.split('/').slice(0, 5).join('/');
+					// Debug: Export JSON of parsed YAML
+					if (DEBUG) {
+						try {
+							await fs.promises.writeFile(
+								path.join(process.cwd(), outDir, details.name + '.json'),
+								JSON.stringify(api),
+							);
+						} catch (e) {
+							console.error(e, dep);
+							return;
+						}
+					}
 
-				// Append header
-				const final = `${HEADER}/**\n * @url ${depUrl}\n * @noResolution\n */\n${result}`;
+					// Turn our parsed object into definitions
+					const result = generateTypeScriptDefinitions(api, details, true);
 
-				// Save the definitions to file
-				try {
-					await fs.promises.writeFile(
-						path.join(process.cwd(), outDir, details.name + '.d.ts'),
-						final,
-					);
-				} catch (e) {
-					console.error(e, dep);
-					return;
+					if (result) {
+						// Guess the URL by including only the first 6 strings split by slash
+						const depUrl = dep.split('/').slice(0, 5).join('/');
+
+						// Append header
+						const final = `${HEADER}/**\n * @url ${depUrl}\n * @noResolution\n */\n${result}`;
+
+						// Save the definitions to file
+						try {
+							await fs.promises.writeFile(
+								path.join(process.cwd(), outDir, details.name + '.d.ts'),
+								final,
+							);
+						} catch (e) {
+							console.error(e, dep);
+							return;
+						}
+					}
 				}
 			}
 		}),
