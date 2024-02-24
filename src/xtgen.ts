@@ -113,6 +113,10 @@ const KNOWN_TYPES: { [key: string]: string } = {
 	'HASH|STRING': 'string | hash',
 	'STRING | HASH': 'string | hash',
 	'HASH | STRING': 'string | hash',
+	'VECTOR3|VECTOR4': 'vmath.vector3 | vmath.vector4',
+	'VECTOR4|VECTOR3': 'vmath.vector3 | vmath.vector4',
+	'VECTOR3 | VECTOR4': 'vmath.vector3 | vmath.vector4',
+	'VECTOR4 | VECTOR3': 'vmath.vector3 | vmath.vector4',
 };
 
 // We'll make default return types slightly stricter than default param types
