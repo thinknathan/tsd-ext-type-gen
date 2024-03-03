@@ -2,7 +2,7 @@
 
 # TS Definitions Generator for TypeScript-Defold
 
-[![CI](https://github.com/thinknathan/tsd-ext-type-gen/actions/workflows/ci.yml/badge.svg)](https://github.com/thinknathan/tsd-ext-type-gen/actions/workflows/ci.yml) <a href="https://discord.gg/eukcq5m"><img alt="Chat with us!" src="https://img.shields.io/discord/766898804896038942.svg?colorB=7581dc&logo=discord&logoColor=white"></a>
+[![CI](https://github.com/thinknathan/tsd-ext-type-gen/actions/workflows/ci.yml/badge.svg)](https://github.com/thinknathan/tsd-ext-type-gen/actions/workflows/ci.yml) ![GitHub License](https://img.shields.io/github/license/thinknathan/tsd-ext-type-gen) <a href="https://discord.gg/eukcq5m"><img alt="Chat with us!" src="https://img.shields.io/discord/766898804896038942.svg?colorB=7581dc&logo=discord&logoColor=white"></a>
 
 TypeScript definitions generator that parses script APIs from Defold extensions. Made for use with [TypeScript + Defold](https://ts-defold.dev/).
 
