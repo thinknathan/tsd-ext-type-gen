@@ -4,6 +4,7 @@
 	"editor.formatOnPaste": true,
 	"editor.tabSize": 2,
 	"editor.detectIndentation": false,
+	"typescript.tsdk": "node_modules\\typescript\\lib",
 	"files.associations": {
 		"*.project": "ini",
 		"*.script_api": "yaml"
