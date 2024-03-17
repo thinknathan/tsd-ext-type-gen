@@ -30,22 +30,19 @@
 		"@types/adm-zip": "~0.5.5",
 		"@types/node": "~20.10.0",
 		"@types/yargs": "^17.0.32",
-		"@typescript-eslint/eslint-plugin": "^6.16.0",
-		"@typescript-eslint/parser": "^6.16.0",
+		"@typescript-eslint/eslint-plugin": "^7.2.0",
+		"@typescript-eslint/parser": "^7.2.0",
 		"@typescript-to-lua/language-extensions": "^1.19.0",
 		"eslint": "^8.56.0",
 		"eslint-config-prettier": "^9.1.0",
 		"eslint-plugin-prettier": "^5.1.0",
 		"prettier": "^3.1.1",
-		"typescript": "~5.3.3"
+		"typescript": "~5.4.2"
 	},
 	"dependencies": {
 		"adm-zip": "~0.5.10",
 		"node-fetch": "^3.3.2",
 		"yaml": "^2.3.4",
 		"yargs": "^17.7.2"
-	},
-	"overrides": {
-		"@types/node": "~20.10.0"
 	}
 }
