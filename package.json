@@ -35,7 +35,6 @@
 		"@typescript-to-lua/language-extensions": "^1.19.0",
 		"eslint": "^8.56.0",
 		"eslint-config-prettier": "^9.1.0",
-		"eslint-plugin-prettier": "^5.1.0",
 		"prettier": "^3.1.1",
 		"typescript": "~5.4.2"
 	},
