@@ -6,7 +6,7 @@
 *.script_api linguist-language=YAML
 
 # Exclude files from archive
-.eslintignore export-ignore
+eslint.config.mjs export-ignore
 .gitignore export-ignore
 .gitattributes export-ignore
 .vscode export-ignore

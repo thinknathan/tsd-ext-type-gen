@@ -241,7 +241,7 @@ async function main() {
 						apis[
 							entry.name.split('.')[0] +
 								`${depFilename ? '_' + depFilename : ''}`
-						] = parse(entry.getData().toString('utf8'));
+						] = parse(entry.getData().toString('utf8')) as ScriptApi;
 					});
 			} catch (e) {
 				console.error(e, dep);
@@ -705,4 +705,4 @@ function generateTypeScriptDefinitions(
 }
 
 // Run the main function
-main();
+void main();
