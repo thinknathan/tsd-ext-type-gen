@@ -80,9 +80,9 @@
     fastq "^1.6.0"
 
 "@ts-defold/types@^1.2.37":
-  version "1.2.41"
-  resolved "https://registry.yarnpkg.com/@ts-defold/types/-/types-1.2.41.tgz#d59175092d941cda2d2c64c23587e9d9c62a9319"
-  integrity sha512-Uqiwfq2r2Fhz7ER1VgeyNzDOd4wMADCsjK50n6zS5jW0PBoUNH/rRRsXGKyCMOYF/G1R3CH0p1N/XHb5GGrkog==
+  version "1.2.44"
+  resolved "https://registry.yarnpkg.com/@ts-defold/types/-/types-1.2.44.tgz#e279525e101b8630af54ee776622c24267c6657a"
+  integrity sha512-XaheYAB2amu6PW0f3o15fXSx1MKd8yNg5KD8Pa+mG5KHlFm9doHhgrq1Iy48upQiV0MmnXFcF5hILaZMVJwviA==
   dependencies:
     lua-types "^2.10.1"
 
