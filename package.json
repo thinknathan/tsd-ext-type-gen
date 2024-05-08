@@ -26,12 +26,15 @@
 		"prettier": "prettier \"./**/*.{ts,d.ts,mjs,md,json}\" --write"
 	},
 	"devDependencies": {
+		"@commitlint/cli": "^19.3.0",
+		"@commitlint/config-conventional": "^19.2.2",
 		"@ts-defold/types": "^1.2.37",
 		"@types/adm-zip": "~0.5.5",
 		"@types/node": "~20.10.0",
 		"@types/yargs": "^17.0.32",
 		"@typescript-to-lua/language-extensions": "^1.19.0",
 		"eslint": "^8.56.0",
+		"husky": "^9.0.11",
 		"prettier": "^3.1.1",
 		"typescript": "~5.4.2",
 		"typescript-eslint": "^7.6.0"

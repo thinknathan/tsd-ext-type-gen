@@ -4,6 +4,8 @@ updates:
     directory: '/'
     schedule:
       interval: monthly
+    commit-message:
+      prefix: 'chore'
   - package-ecosystem: npm
     directory: '/'
     schedule:
@@ -12,3 +14,5 @@ updates:
     ignore:
       - dependency-name: '*'
         update-types: ['version-update:semver-major']
+    commit-message:
+      prefix: 'chore'
