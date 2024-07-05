@@ -289,7 +289,7 @@ async function main() {
 						const depUrl = dep.split('/').slice(0, 5).join('/');
 
 						// Append header
-						const final = `${HEADER}/**\n * @url ${depUrl}\n * @noResolution\n */\n${result}`;
+						const final = `${HEADER}/**\n * @see {@link ${depUrl}|Source}\n * @noResolution\n */\n${result}`;
 
 						// Save the definitions to file
 						try {

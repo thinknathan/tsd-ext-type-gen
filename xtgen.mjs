@@ -260,7 +260,7 @@ async function main() {
 						// Guess the URL by including only the first 6 strings split by slash
 						const depUrl = dep.split('/').slice(0, 5).join('/');
 						// Append header
-						const final = `${HEADER}/**\n * @url ${depUrl}\n * @noResolution\n */\n${result}`;
+						const final = `${HEADER}/**\n * @see {@link ${depUrl}|Source}\n * @noResolution\n */\n${result}`;
 						// Save the definitions to file
 						try {
 							await fs.promises.writeFile(
@@ -598,4 +598,4 @@ function generateTypeScriptDefinitions(api, details, root) {
 	return definitions;
 }
 // Run the main function
-main();
+void main();
