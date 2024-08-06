@@ -33,11 +33,11 @@
 		"@types/node": "~20.10.0",
 		"@types/yargs": "^17.0.32",
 		"@typescript-to-lua/language-extensions": "^1.19.0",
-		"eslint": "^8.56.0",
+		"eslint": "^9.0.0",
 		"husky": "^9.0.11",
 		"prettier": "^3.1.1",
 		"typescript": "5.5.2",
-		"typescript-eslint": "^7.6.0"
+		"typescript-eslint": "^8.0.0"
 	},
 	"dependencies": {
 		"adm-zip": "~0.5.10",
