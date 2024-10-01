@@ -13,7 +13,7 @@ jobs:
     if: ${{ github.actor == 'dependabot[bot]' }}
     steps:
       - name: Delay for checks
-        run: sleep 1m
+        run: sleep 2m
       - name: Auto-merge Dependabot PRs
         if: github.event.pull_request.mergeable == true
         run: gh pr merge --auto --merge "$PR_URL"
