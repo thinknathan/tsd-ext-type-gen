@@ -258,9 +258,9 @@
     fastq "^1.6.0"
 
 "@ts-defold/types@^1.2.37":
-  version "1.2.50"
-  resolved "https://registry.yarnpkg.com/@ts-defold/types/-/types-1.2.50.tgz#c546944d750acd4793dece4764bf391c326c9120"
-  integrity sha512-zh6hKCxAjyhTOpyhDisnN3KkKE7+/AKoMu5zbXnRH4RKFkVrdVmdwei26cATl2CoZbQ9e79jZrDUWUVEXZpxqA==
+  version "1.2.51"
+  resolved "https://registry.yarnpkg.com/@ts-defold/types/-/types-1.2.51.tgz#e0e4d5c3752fc5aa06542f6ae4a80359b6c23441"
+  integrity sha512-ZuntEleKAWRKTaMWWWJZQ4MWV9/Wlc2i11QYothp2PUN9ZI/BghIodHofzJ+8GiMnEx097rEtY3m14GA05n2ug==
   dependencies:
     lua-types "^2.10.1"
 
