@@ -266,43 +266,6 @@ export const preResource = [
                     {
                         type: '{handle: number, attachments: { handle: number; width: number; height: number; depth: number; mipmaps: number; type: number, buffer_type: number, texture?: hash }}[]',
                         useExactType: true,
-                        // type: 'table',
-                        // fields: [
-                        // 	{
-                        // 		name: 'handle',
-                        // 		type: 'handle',
-                        // 	},
-                        // 	{
-                        // 		name: 'attachments',
-                        // 		type: 'table',
-                        // 		fields: [
-                        // 			{
-                        // 				name: 'handle',
-                        // 				type: 'handle',
-                        // 			},
-                        // 			{
-                        // 				name: 'width',
-                        // 				type: 'number',
-                        // 			},
-                        // 			{
-                        // 				name: 'height',
-                        // 				type: 'number',
-                        // 			},
-                        // 			{
-                        // 				name: 'depth',
-                        // 				type: 'number',
-                        // 			},
-                        // 			{
-                        // 				name: 'mipmaps',
-                        // 				type: 'number',
-                        // 			},
-                        // 			{
-                        // 				name: 'type',
-                        // 				type: 'number',
-                        // 			},
-                        // 		],
-                        // 	},
-                        // ],
                     },
                 ],
             },

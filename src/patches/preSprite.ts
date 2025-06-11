@@ -83,10 +83,14 @@ export const preSprite = [
 							{
 								name: 'offset',
 								type: 'number',
+								// @ts-expect-error adding to narrow type
+								optional: true,
 							},
 							{
 								name: 'playback_rate',
 								type: 'number',
+								// @ts-expect-error adding to narrow type
+								optional: true,
 							},
 						],
 					},

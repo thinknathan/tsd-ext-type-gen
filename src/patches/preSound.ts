@@ -30,7 +30,7 @@ export const preSound = [
 				name: 'get_groups',
 				returns: [
 					{
-						type: 'hash | LuaSet<hash>',
+						type: 'hash[]',
 						useExactType: true,
 					},
 				],

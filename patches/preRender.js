@@ -180,7 +180,7 @@ export const preRender = [
                 parameters: [
                     {
                         name: 'tags',
-                        type: `Array<hash | string>`,
+                        type: `Array<hash | string> | LuaSet<hash | string>`,
                         useExactType: true,
                     },
                 ],
