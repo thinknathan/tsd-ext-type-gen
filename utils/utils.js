@@ -15,8 +15,7 @@ function isApiTable(entry) {
 function isApiFunc(entry) {
     return ((typeof entry.type === 'string' &&
         KNOWN_TYPES[entry.type.toUpperCase()] === KNOWN_TYPES['FUNCTION']) ||
-        'parameters' in entry ||
-        'returns' in entry);
+        (('parameters' in entry || 'returns' in entry) && entry.type !== 'CONSTANT'));
 }
 /**
  * Check for type definition entry,
