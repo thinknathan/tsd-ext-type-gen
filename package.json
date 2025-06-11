@@ -1,7 +1,10 @@
 {
 	"name": "tsd-ext-type-gen",
-	"version": "1.1.0",
+	"version": "2.0.0",
 	"description": "TypeScript definitions generator that parses script APIs from Defold extensions",
+	"engines": {
+		"node": "^18.20.0 || ^20.9.0 || >=21.1.0"
+	},
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/thinknathan/tsd-ext-type-gen.git"
@@ -14,11 +17,14 @@
 		"xtgen": "./xtgen.mjs"
 	},
 	"files": [
-		"xtgen.mjs"
+		"xtgen.mjs",
+		"utils",
+		"patches"
 	],
 	"scripts": {
 		"ci": "npm run lint && npm run test && tsc --project ./test.tsconfig.json --noEmit",
 		"gen": "node xtgen.mjs -p ./tests/game.project -o ./output",
+		"gen:global": "node xtgen.mjs -m global -o ./output",
 		"lint": "eslint src",
 		"build": "tsc && npm run renameMjs && prettier \"*.mjs\" --write",
 		"renameMjs": "node -e \"require('fs').renameSync('xtgen.js', 'xtgen.mjs')\"",
@@ -30,18 +36,17 @@
 		"@commitlint/config-conventional": "^19.2.2",
 		"@ts-defold/types": "^1.2.37",
 		"@types/adm-zip": "~0.5.5",
-		"@types/node": "~20.10.0",
+		"@types/node": "~22",
 		"@types/yargs": "^17.0.32",
 		"@typescript-to-lua/language-extensions": "^1.19.0",
 		"eslint": "^9.0.0",
 		"husky": "^9.0.11",
 		"prettier": "^3.1.1",
-		"typescript": "~5.5.2",
+		"typescript": "5.8.2",
 		"typescript-eslint": "^8.0.0"
 	},
 	"dependencies": {
 		"adm-zip": "~0.5.10",
-		"node-fetch": "^3.3.2",
 		"yaml": "^2.3.4",
 		"yargs": "^17.7.2"
 	}

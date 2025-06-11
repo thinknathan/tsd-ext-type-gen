@@ -22,6 +22,8 @@ npm install tsd-ext-type-gen --save-dev
 
 - `-p` path to your `game.project` (default `./app/game.project`)
 - `-o` path to an output folder (default `./@types`)
+- `-m` the mode: `project` for locally installed Defold extensions or `global` for Defold engine API docs (default `project`)
+- `-r` release type used in `global` mode: `stable` or `beta` channel (default `stable`)
 
 ## Background
 

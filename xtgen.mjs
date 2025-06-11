@@ -1,123 +1,16 @@
 #!/usr/bin/env node
 import * as fs from 'fs';
-import AdmZip from 'adm-zip';
 import * as path from 'path';
 import * as process from 'process';
-import fetch from 'node-fetch';
+import AdmZip from 'adm-zip';
 import { parse } from 'yaml';
 import yargs from 'yargs';
-const DEBUG = false;
-// Definitions file starts with this string
-const HEADER = `/** @noSelfInFile */
-/// <reference types="@typescript-to-lua/language-extensions" />
-/// <reference types="@ts-defold/types" />\n`;
-// Invalid names in TypeScript
-const INVALID_NAMES = [
-	'any',
-	'boolean',
-	'break',
-	'case',
-	'catch',
-	'class',
-	'const',
-	'continue',
-	'debugger',
-	'default',
-	'delete',
-	'do',
-	'else',
-	'enum',
-	'export',
-	'extends',
-	'false',
-	'finally',
-	'for',
-	'function',
-	'if',
-	'implements',
-	'import',
-	'in',
-	'instanceof',
-	'interface',
-	'let',
-	'new',
-	'null',
-	'package',
-	'private',
-	'protected',
-	'public',
-	'return',
-	'static',
-	'super',
-	'switch',
-	'throw',
-	'true',
-	'try',
-	'typeof',
-	'undefined',
-	'var',
-	'void',
-	'while',
-	'with',
-	'yield',
-];
-// All valid types are listed here
-const KNOWN_TYPES = {
-	TBL: '{}',
-	TABLE: '{}',
-	NUM: 'number',
-	NUMBER: 'number',
-	NUMMBER: 'number', // intentional typo
-	INT: 'number',
-	INTEGER: 'number',
-	FLOAT: 'number',
-	STR: 'string',
-	STRING: 'string',
-	BOOL: 'boolean',
-	BOOLEAN: 'boolean',
-	FN: '(...args: any[]) => any',
-	FUNC: '(...args: any[]) => any',
-	FUNCTION: '(...args: any[]) => any',
-	HASH: 'hash',
-	URL: 'url',
-	NODE: 'node',
-	BUFFER: 'buffer',
-	BUFFERSTREAM: 'bufferstream',
-	VECTOR3: 'vmath.vector3',
-	VECTOR4: 'vmath.vector4',
-	MATRIX: 'vmath.matrix4',
-	MATRIX4: 'vmath.matrix4',
-	QUAT: 'vmath.quaternion',
-	QUATERNION: 'vmath.quaternion',
-	QUATERTION: 'vmath.quaternion', // intentional typo
-	LUAUSERDATA: 'LuaUserdata',
-	// TO-DO: Parse strings that have pipes instead of relying on a naive lookup
-	'STRING|HASH|URL': 'string | hash | url',
-	'STRING|URL|HASH': 'string | hash | url',
-	'HASH|STRING|URL': 'string | hash | url',
-	'HASH|URL|STRING': 'string | hash | url',
-	'URL|STRING|HASH': 'string | hash | url',
-	'URL|HASH|STRING': 'string | hash | url',
-	'STRING | HASH | URL': 'string | hash | url',
-	'STRING | URL | HASH': 'string | hash | url',
-	'HASH | STRING | URL': 'string | hash | url',
-	'HASH | URL | STRING': 'string | hash | url',
-	'URL | STRING | HASH': 'string | hash | url',
-	'URL | HASH | STRING': 'string | hash | url',
-	'STRING|HASH': 'string | hash',
-	'HASH|STRING': 'string | hash',
-	'STRING | HASH': 'string | hash',
-	'HASH | STRING': 'string | hash',
-	'VECTOR3|VECTOR4': 'vmath.vector3 | vmath.vector4',
-	'VECTOR4|VECTOR3': 'vmath.vector3 | vmath.vector4',
-	'VECTOR3 | VECTOR4': 'vmath.vector3 | vmath.vector4',
-	'VECTOR4 | VECTOR3': 'vmath.vector3 | vmath.vector4',
-};
-// We'll make default return types slightly stricter than default param types
-const DEFAULT_PARAM_TYPE = 'any';
-const DEFAULT_RETURN_TYPE = 'unknown';
-// Theoretically, it's impossible not to have a name, but just in case
-const DEFAULT_NAME_IF_BLANK = 'missingName';
+import { applyGlobalPatches } from './utils/patcher.js';
+import { parseAll } from './utils/parser.js';
+import { DEBUG, HEADER, HEADER_EXT, HEADER_GLOBAL } from './utils/constants.js';
+/**
+ * Main entry point
+ */
 async function main() {
 	console.time('Done in');
 	// Command line args
@@ -134,9 +27,36 @@ async function main() {
 			type: 'string',
 			default: './@types',
 		})
+		.option('m', {
+			alias: 'mode',
+			describe:
+				'The parsing mode: "project" for locally installed Defold extensions or "global" for Defold engine API docs',
+			type: 'string',
+			default: 'project',
+		})
+		.option('r', {
+			alias: 'release',
+			describe: 'Used in "global" mode: "stable" or "beta" release channel',
+			type: 'string',
+			default: 'stable',
+		})
 		.parse();
 	const project = argv.p;
 	const outDir = argv.o;
+	const mode = argv.m;
+	const release = argv.r;
+	if (mode === 'global') {
+		await extractApiFromDefoldGlobal(release, outDir);
+	} else if (mode === 'project') {
+		await extractApiFromProject(project, outDir);
+	}
+	console.timeEnd('Done in');
+	console.log(`Exported definitions to ${path.join(process.cwd(), outDir)}`);
+}
+/**
+ * Parse project file to find dependencies and extract API from `script_api`
+ */
+async function extractApiFromProject(project, outDir) {
 	// Find project file
 	const absPath = path.join(process.cwd(), project);
 	// Read project file
@@ -163,7 +83,8 @@ async function main() {
 		deps.map(async (dep) => {
 			const details = {
 				name: '', // We'll guess the name later
-				isLua: true,
+				isExternalLuaModule: true,
+				isGlobalDefApi: false,
 			};
 			// Fetch dependency zip file
 			const req = await fetch(dep);
@@ -184,7 +105,7 @@ async function main() {
 			// If there's a C++ file, it's probably not a Lua module
 			files.some((entry) => {
 				if (entry.name.endsWith('.cpp')) {
-					details.isLua = false;
+					details.isExternalLuaModule = false;
 					return true;
 				}
 				return false;
@@ -226,376 +147,271 @@ async function main() {
 				console.error(e, dep);
 				return;
 			}
-			for (const key in apis) {
-				if (Object.prototype.hasOwnProperty.call(apis, key)) {
-					// Set name according to key
-					details.name = key;
-					// Start processing api
-					const api = apis[key];
-					// If we have no API to parse, exit early
-					if (!api || api.length === 0) {
-						return;
-					}
-					// Make output directory
-					try {
-						await fs.promises.mkdir(path.join(process.cwd(), outDir));
-					} catch {
-						// Silence this error
-					}
-					// Debug: Export JSON of parsed YAML
-					if (DEBUG) {
-						try {
-							await fs.promises.writeFile(
-								path.join(process.cwd(), outDir, details.name + '.json'),
-								JSON.stringify(api),
-							);
-						} catch (e) {
-							console.error(e, dep);
-							return;
-						}
-					}
-					// Turn our parsed object into definitions
-					const result = generateTypeScriptDefinitions(api, details, true);
-					if (result) {
-						// Guess the URL by including only the first 6 strings split by slash
-						const depUrl = dep.split('/').slice(0, 5).join('/');
-						// Append header
-						const final = `${HEADER}/**\n * @see {@link ${depUrl}|Source}\n * @noResolution\n */\n${result}`;
-						// Save the definitions to file
-						try {
-							await fs.promises.writeFile(
-								path.join(process.cwd(), outDir, details.name + '.d.ts'),
-								final,
-							);
-						} catch (e) {
-							console.error(e, dep);
-							return;
-						}
-					}
-				}
-			}
+			await outputDefinitions(apis, outDir, dep, details);
 		}),
 	);
-	console.timeEnd('Done in');
-	console.log(`Exported definitions to ${path.join(process.cwd(), outDir)}`);
 }
-// Utility Functions
-// Check if a string is all uppercase with optional underscores
-function isAllUppercase(str) {
-	return /^[A-Z0-9_]+$/.test(str);
-}
-// Check type of API entry
-function isApiTable(entry) {
-	return (
-		(typeof entry.type === 'string' && entry.type.toUpperCase() === 'TABLE') ||
-		'members' in entry
+/**
+ * Parse global Defold API
+ */
+async function extractApiFromDefoldGlobal(channel, outDir) {
+	const info = await fetch(`http://d.defold.com/${channel}/info.json`).then(
+		(response) => response.json(),
 	);
-}
-// Check type of API entry
-function isApiFunc(entry) {
-	return (
-		(typeof entry.type === 'string' &&
-			entry.type.toUpperCase() === 'FUNCTION') ||
-		'parameters' in entry
+	const tag =
+		channel === 'stable' ? `${info.version}` : `${info.version}-${channel}`;
+	const ref = await fetch(
+		`https://api.github.com/repos/defold/defold/git/ref/tags/${tag}`,
 	);
-}
-function isNameInvalid(name, isParam) {
-	name = String(name);
-	if (isParam) {
-		return INVALID_NAMES.includes(name);
-	} else {
-		return ['this'].concat(INVALID_NAMES).includes(name);
+	if (ref.status === 200) {
+		const refInfo = await ref.json();
+		const tagInfo = await (await fetch(refInfo.object.url)).json();
+		info.sha1 = tagInfo.object.sha;
 	}
-}
-// Sanitizes name
-function getName(name, isParam) {
-	let modifiedName = String(name);
-	if (isParam) {
-		// Special case: arguments
-		modifiedName = modifiedName.replace(/^\.\.\.$/, 'args');
-		// Special case: Lua's `self` variable
-		modifiedName = modifiedName.replace(/^self$/, 'this');
-	}
-	// Sanitize type name: allow only alpha-numeric, underscore, dollar sign
-	modifiedName = modifiedName.replace(/[^a-zA-Z0-9_$]/g, '_');
-	// If the first character is a number, add a dollar sign to start
-	if (/^\d/.test(modifiedName)) {
-		modifiedName = '$' + modifiedName;
-	}
-	// If we're modifying a function name, not a parameter, give a warning
-	if (!isParam && modifiedName !== name) {
-		console.warn(
-			`Modifying invalid ${typeof name} "${name}" to "${modifiedName}"`,
+	const req = await fetch(
+		`http://d.defold.com/archive/${info.sha1}/engine/share/ref-doc.zip`,
+	);
+	if (req.status !== 200) {
+		throw new Error(
+			`Unable to download archive for ${info.version} (${info.sha1}): ${req.status}`,
 		);
 	}
-	// Check against the reserved keywords in TypeScript
-	if (isNameInvalid(modifiedName, isParam)) {
-		modifiedName = modifiedName + '_';
+	// Get a node-specific buffer from the request
+	const zipBuffer = Buffer.from(await req.arrayBuffer());
+	// Unzip file into memory
+	const zip = new AdmZip(zipBuffer);
+	if (!zip.test()) {
+		console.error(`Zip archive damaged for ${info.version} (${info.sha1})`);
+		return;
 	}
-	return modifiedName;
-}
-// Transforms API type to TS type
-function getType(type, context) {
-	let defaultType = DEFAULT_PARAM_TYPE;
-	if (context === 'return') {
-		defaultType = DEFAULT_RETURN_TYPE;
-	}
-	if (typeof type === 'string') {
-		return KNOWN_TYPES[type.toUpperCase()] ?? defaultType;
-	} else if (Array.isArray(type)) {
-		const typeSet = new Set();
-		type.forEach((rawType) => {
-			if (typeof rawType === 'string') {
-				typeSet.add(KNOWN_TYPES[rawType.toUpperCase()] ?? defaultType);
-			}
-		});
-		const typeArray = Array.from(typeSet);
-		return typeArray.length ? typeArray.join(' | ') : defaultType;
-	}
-	return defaultType;
-}
-function sanitizeForComment(str) {
-	return str.replace(/\*\//g, '*\\/');
-}
-/**
- * @param name the original, unsanitized name
- * @param root
- */
-function getDeclarationKeyword(name, root) {
-	if (root) {
-		return 'declare';
-	} else if (isNameInvalid(name, false)) {
-		return '';
-	} else {
-		return 'export';
-	}
-}
-// Transforms and sanitizes descriptions
-function getComments(entry) {
-	// Make sure the description doesn't break out of the comment
-	const desc = entry.desc || entry.description;
-	let newDesc = desc ?? '';
-	// If params exist, let's create `@param`s in JSDoc format
-	if (entry.parameters && Array.isArray(entry.parameters)) {
-		newDesc = getParamComments(entry.parameters, newDesc);
-	}
-	// Comments for `@returns`
-	const returnObj = entry.return || entry.returns;
-	if (returnObj) {
-		newDesc = getReturnComments(returnObj, newDesc);
-	}
-	// Comments for `@example`
-	if (entry.examples && Array.isArray(entry.examples)) {
-		newDesc = getExampleComments(entry.examples, newDesc);
-	}
-	return newDesc ? `/**\n * ${sanitizeForComment(newDesc)}\n */\n` : '';
-}
-function getReturnComments(returnObj, newDesc) {
-	let returnType = '';
-	let comments = '';
-	if (Array.isArray(returnObj)) {
-		if (returnObj.length > 1) {
-			returnType = `LuaMultiReturn<[${returnObj.map((ret) => ret.type).join(', ')}]>`;
-		} else {
-			returnType = Array.isArray(returnObj[0].type)
-				? returnObj[0].type.join(' | ')
-				: returnObj[0].type ?? '';
-		}
-		// Add comments if they exist
-		if (returnObj.some((ret) => ret.desc || ret.description)) {
-			comments = `${returnObj.map((ret) => ret.desc || ret.description).join(' | ')}`;
-		}
-	} else if (returnObj.type) {
-		// Instead of getting a TS type here, use the raw Lua type
-		returnType = Array.isArray(returnObj.type)
-			? returnObj.type.join(' | ')
-			: returnObj.type;
-		comments = getType(returnObj.type, 'return');
-	}
-	// If we've figured out a comment, but not a returnType
-	if (comments.length && !returnType.length) {
-		returnType = DEFAULT_RETURN_TYPE;
-	}
-	newDesc += `\n * @returns {${returnType}} ${comments}`;
-	return newDesc;
-}
-function getParamComments(parameters, newDesc) {
-	parameters.forEach((param) => {
-		const name = param.name ? getName(param.name, true) : '';
-		if (name) {
-			newDesc += `\n * @param`;
-			if (param.type) {
-				// Instead of getting a TS type here, use the raw Lua type
-				let rawType = '';
-				if (Array.isArray(param.type)) {
-					// If multiple types, join them into a string
-					rawType = param.type.join('|');
-				} else {
-					rawType = param.type;
-				}
-				// Sanitize type name, allow alpha-numeric, underscore and pipe
-				rawType = rawType.replace(/[^a-zA-Z|0-9_$]/g, '_');
-				newDesc += ` {${rawType}}`;
-			}
-			newDesc += ` ${name}`;
-			const desc = param.desc || param.description;
-			if (desc) {
-				newDesc += ` ${desc}`;
-			}
-			if (param.fields && Array.isArray(param.fields)) {
-				newDesc = getParamFields(param.fields, newDesc);
-			}
-		}
-	});
-	return newDesc;
-}
-function getParamFields(fields, newDesc) {
-	fields.forEach((field) => {
-		newDesc += ` ${JSON.stringify(field)}`;
-	});
-	return newDesc;
-}
-function getExampleComments(examples, newDesc) {
-	examples.forEach((example) => {
-		const desc = example.desc || example.description;
-		if (desc) {
-			newDesc += `\n * @example ${desc}`;
-		}
-	});
-	return newDesc;
-}
-/**
- * @param name must be the original, unsanitized name
- * @param isParam
- */
-function getExportOverride(name, isParam) {
-	if (isNameInvalid(name, isParam)) {
-		return `export {${getName(name, isParam)} as ${name}}`;
-	} else {
-		return '';
-	}
-}
-// Main Functions
-// Function to generate TypeScript definitions for ScriptApiTable
-function generateTableDefinition(entry, details, root) {
-	const declaration = getDeclarationKeyword(entry.name ?? '', root);
-	const override = entry.name ? getExportOverride(entry.name, false) : '';
-	const name = entry.name ? getName(entry.name, false) : DEFAULT_NAME_IF_BLANK;
-	let tableDeclaration = `${declaration ? declaration + ' ' : ''}namespace ${name} {\n`;
-	if (root) {
-		tableDeclaration = details.isLua
-			? `${declaration} module '${name}.${name}' {\n`
-			: `${declaration} namespace ${name} {\n`;
-	}
-	if (entry.members && Array.isArray(entry.members)) {
-		return `${tableDeclaration}${generateTypeScriptDefinitions(entry.members, details, false)}}${override ? override + ';\n' : ''}`;
-	} else {
-		return `${tableDeclaration}}${override ? override + ';\n' : ''}`;
-	}
-}
-// Function to generate TypeScript definitions for ScriptApiFunction
-function generateFunctionDefinition(entry, isParam, root) {
-	const parameters = entry.parameters
-		? entry.parameters.map(getParameterDefinition).join(', ')
-		: '';
-	const returnType = getReturnType(entry.return || entry.returns);
-	if (isParam) {
-		return `(${parameters}) => ${returnType}`;
-	} else {
-		const comment = getComments(entry);
-		const declaration = getDeclarationKeyword(entry.name ?? '', root);
-		const override = entry.name ? getExportOverride(entry.name, isParam) : '';
-		const name = entry.name
-			? getName(entry.name, false)
-			: DEFAULT_NAME_IF_BLANK;
-		return `${comment}${declaration ? declaration + ' ' : ''}function ${name}(${parameters}): ${returnType};\n${override ? override + ';\n' : ''}`;
-	}
-}
-function getParameterDefinition(param) {
-	const name = param.name ? getName(param.name, true) : DEFAULT_NAME_IF_BLANK;
-	const optional = param.optional ? '?' : '';
-	let type = getType(param.type, 'param');
-	if (type === KNOWN_TYPES['FUNCTION']) {
-		// Get a more specific function signature
-		type = generateFunctionDefinition(param, true, false);
-	} else if (
-		type === KNOWN_TYPES['TABLE'] &&
-		param.fields &&
-		Array.isArray(param.fields)
-	) {
-		// Try to get the exact parameters of a table
-		type = `{ ${param.fields.map(getParameterDefinition).join('; ')} }`;
-	}
-	return `${name}${optional}: ${type}`;
-}
-function getReturnType(returnObj) {
-	if (!returnObj) {
-		return 'void';
-	}
-	if (Array.isArray(returnObj)) {
-		if (returnObj.length > 1) {
-			return `LuaMultiReturn<[${returnObj.map((ret) => getType(ret.type, 'return')).join(', ')}]>`;
-		} else {
-			return `${getType(returnObj[0].type, 'return')}`;
-		}
-	} else if (returnObj.type) {
-		return getType(returnObj.type, 'return');
-	} else {
-		return 'void'; // Fallback in case we can't parse it at all
-	}
-}
-// Function to generate TypeScript definitions for ScriptApiEntry
-function generateEntryDefinition(entry, root) {
-	const declaration = getDeclarationKeyword(entry.name ?? '', root);
-	const override = entry.name ? getExportOverride(entry.name, false) : '';
-	const name = entry.name ? getName(entry.name, false) : DEFAULT_NAME_IF_BLANK;
-	const varType = isAllUppercase(name) ? 'const' : 'let';
-	const type = getType(entry.type, 'return');
-	const comment = getComments(entry);
-	return `${comment}${declaration ? declaration + ' ' : ''}${varType} ${name}: ${type};\n${override ? override + ';\n' : ''}`;
-}
-// Main function to generate TypeScript definitions for ScriptApi
-function generateTypeScriptDefinitions(api, details, root) {
-	let definitions = '';
-	const namespaces = {};
-	api.forEach((entry) => {
-		// Handle nested properties
-		if (typeof entry.name === 'string' && entry.name.includes('.')) {
-			const namePieces = entry.name.split('.');
-			const entryNamespace = namePieces[0];
-			const entryName = namePieces[1];
-			// Create namespace if not already exists
-			namespaces[entryNamespace] = namespaces[entryNamespace] || [];
-			// Update entry name and add to the namespace
-			entry.name = entryName;
-			namespaces[entryNamespace].push(entry);
-		} else if (isApiTable(entry)) {
-			definitions += generateTableDefinition(entry, details, root);
-		} else if (isApiFunc(entry)) {
-			definitions += generateFunctionDefinition(entry, false, root);
-		} else {
-			definitions += generateEntryDefinition(entry, root);
-		}
-	});
-	// Loop through namespaces
-	for (const namespace in namespaces) {
-		if (Object.prototype.hasOwnProperty.call(namespaces, namespace)) {
-			const namespaceEntries = namespaces[namespace];
-			definitions += `${root ? 'declare' : 'export'} namespace ${namespace} {\n`;
-			// Loop through entries within the namespace
-			namespaceEntries.forEach((entry) => {
-				if (isApiTable(entry)) {
-					definitions += generateTableDefinition(entry, details, false);
-				} else if (isApiFunc(entry)) {
-					definitions += generateFunctionDefinition(entry, false, false);
-				} else {
-					definitions += generateEntryDefinition(entry, false);
+	// Locate all files inside the zip
+	const files = zip.getEntries();
+	// Attempt to locate a `json` file to parse
+	const apis = {};
+	try {
+		files
+			// Filter out non-json files
+			// And remove a bunch of APIs unrelated to the Lua API
+			.filter(
+				(entry) =>
+					entry.name.endsWith('.json') &&
+					!entry.name.startsWith('script_bitop') &&
+					!entry.name.startsWith('cs-dmsdk') &&
+					!entry.name.startsWith('dmsdk') &&
+					!entry.name.startsWith('engine') &&
+					!entry.name.startsWith('editor') &&
+					!entry.name.startsWith('lua') &&
+					!entry.name.startsWith('proto'),
+			)
+			// Parse the JSON files
+			.forEach((entry) => {
+				const api = JSON.parse(entry.getData().toString('utf8'));
+				if (
+					api &&
+					api.info &&
+					typeof api.info.namespace === 'string' &&
+					Array.isArray(api.elements) &&
+					api.elements.length > 0
+				) {
+					const namespace = api.info.namespace;
+					if (namespace === 'builtins') {
+						// Special case for builtins
+						// They're not a member of a table: they're on the root
+						const equivalentApi = api.elements.map(jsonToScriptApiEquivalent);
+						if (apis[namespace] === undefined) {
+							apis[namespace] = equivalentApi;
+						} else {
+							apis[namespace] = apis[namespace].concat(equivalentApi);
+						}
+					} else {
+						// Create a fake table for the members to belong to
+						const equivalentApi = [
+							{
+								name: namespace,
+								type: 'table',
+								members: api.elements.map(jsonToScriptApiEquivalent),
+							},
+						];
+						if (apis[namespace] === undefined) {
+							apis[namespace] = equivalentApi;
+						} else {
+							// Merge members of duplicate namespaces
+							const newMembers = equivalentApi[0].members;
+							apis[namespace][0].members =
+								apis[namespace][0].members.concat(newMembers);
+						}
+					}
 				}
 			});
-			definitions += '}\n';
+	} catch (e) {
+		console.error(e);
+		return;
+	}
+	await outputDefinitions(
+		apis,
+		outDir,
+		`http://d.defold.com/archive/${info.sha1}/engine/share/ref-doc.zip`,
+		{
+			name: 'global',
+			isExternalLuaModule: false,
+			isGlobalDefApi: true,
+			version: tag,
+			sha: info.sha1,
+		},
+	);
+}
+/**
+ * Makes the JSON API equivalent to the Script API equivalent
+ * so they can be parsed by the same parser
+ */
+function jsonToScriptApiEquivalent(obj) {
+	// Look through each property in the object, and if that value is an array, recursively call this function
+	if (typeof obj === 'object') {
+		for (const key in obj) {
+			if (Array.isArray(obj[key])) {
+				obj[key] = jsonToScriptApiEquivalent(obj[key]);
+			} else if (typeof obj[key] === 'object') {
+				obj[key] = jsonToScriptApiEquivalent(obj[key]);
+			}
 		}
 	}
-	return definitions;
+	if (obj.name) {
+		// If name has a period, remove everything before the first period
+		// Repeat as needed
+		while (obj.name.indexOf('.') !== -1) {
+			obj.name = obj.name.substring(obj.name.indexOf('.') + 1);
+		}
+	}
+	if (obj.returnvalues) {
+		obj.returns = obj.returnvalues;
+		delete obj.returnvalues;
+	}
+	if (obj.description) {
+		obj.desc = obj.description;
+		delete obj.description;
+	}
+	if (obj.doc) {
+		obj.desc = obj.doc;
+		delete obj.doc;
+	}
+	if (Array.isArray(obj.types)) {
+		if (obj.types.length === 1) {
+			if (typeof obj.types[0] === 'string' && obj.types[0].length > 0) {
+				obj.type = obj.types[0];
+			}
+		} else if (obj.types.length > 1) {
+			obj.type = obj.types.join('|');
+		}
+		delete obj.types;
+	}
+	if (obj.type === 'VARIABLE') {
+		obj.type = 'CONSTANT';
+	}
+	if (obj.is_optional) {
+		if (
+			typeof obj.is_optional === 'string' &&
+			obj.is_optional.length > 0 &&
+			obj.is_optional !== 'False'
+		) {
+			obj.optional = true;
+		}
+		delete obj.is_optional;
+	}
+	if (typeof obj.examples === 'string' && obj.examples.length === 0) {
+		delete obj.examples;
+	}
+	if (obj.members && Array.isArray(obj.members) && obj.members.length === 0) {
+		delete obj.members;
+	}
+	if (
+		obj.parameters &&
+		Array.isArray(obj.parameters) &&
+		obj.parameters.length === 0
+	) {
+		delete obj.parameters;
+	}
+	if (obj.returns && Array.isArray(obj.returns) && obj.returns.length === 0) {
+		delete obj.returns;
+	}
+	delete obj.language;
+	delete obj.tparams;
+	delete obj.error;
+	delete obj.brief;
+	delete obj.replaces;
+	delete obj.notes;
+	return obj;
+}
+/** Parse API and generate TypeScript definitions, then write them to disk */
+async function outputDefinitions(apis, outDir, dep, details) {
+	let globalCombinedApi = `${HEADER}${HEADER_GLOBAL}\n// Defold v${details.version ?? ''} (${details.sha ?? ''})\n\n`;
+	for (const key in apis) {
+		if (Object.prototype.hasOwnProperty.call(apis, key)) {
+			// Set name according to key
+			details.name = key;
+			// Start processing api
+			let api = apis[key];
+			// If we have no API to parse, exit early
+			if (!api || api.length === 0) {
+				return;
+			}
+			// Make output directory
+			try {
+				await fs.promises.mkdir(path.join(process.cwd(), outDir));
+			} catch {
+				// Silence this error
+			}
+			// Debug: Export JSON of parsed YAML
+			if (DEBUG) {
+				try {
+					await fs.promises.writeFile(
+						path.join(process.cwd(), outDir, details.name + '.json'),
+						JSON.stringify(api),
+					);
+				} catch (e) {
+					console.error(e);
+					return;
+				}
+			}
+			if (details.isGlobalDefApi) {
+				// Special case where global API needs to be patched
+				api = applyGlobalPatches(api, key);
+			}
+			// Turn our parsed object into definitions (string)
+			const result = parseAll(api, details.isExternalLuaModule, true);
+			if (result) {
+				if (details.isGlobalDefApi) {
+					globalCombinedApi += result;
+				} else {
+					// Guess the source URL by including only the first 6 strings split by slash
+					const depUrl = dep.split('/').slice(0, 5).join('/');
+					// Append header
+					const final = `${HEADER}${HEADER_EXT}/**\n * @see {@link ${depUrl}|Source}\n * @noResolution\n */\n${result}`;
+					// Save the definitions to file
+					try {
+						await fs.promises.writeFile(
+							path.join(process.cwd(), outDir, details.name + '.d.ts'),
+							final,
+						);
+					} catch (e) {
+						console.error(e, dep);
+						return;
+					}
+				}
+			}
+		}
+	}
+	if (details.isGlobalDefApi) {
+		// Save the definitions to file
+		try {
+			await fs.promises.writeFile(
+				path.join(process.cwd(), outDir, 'index.d.ts'),
+				globalCombinedApi,
+			);
+		} catch (e) {
+			console.error(e, dep);
+			return;
+		}
+	}
 }
 // Run the main function
 void main();

@@ -9,6 +9,7 @@
 		"strict": true,
 		"target": "ES2020",
 		"typeRoots": ["./@types", "./node_modules/@types"],
+		"erasableSyntaxOnly": true
 	},
-	"exclude": ["./node_modules/*", "./*.mjs", "./output/*"],
+	"exclude": ["./node_modules/*", "./*.mjs", "./output/*"]
 }
