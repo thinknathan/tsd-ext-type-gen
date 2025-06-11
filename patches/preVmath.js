@@ -12,6 +12,10 @@ export const preVmath = [
                         useExactType: true,
                     },
                 ],
+                returns: {
+                    type: 'vector',
+                    useExactType: true,
+                },
             },
         ],
     },
