@@ -9,21 +9,21 @@ import { getType } from './typeParser.js';
 function parseAll(api, isExternalLuaModule, root) {
     let definitions = '';
     const namespaces = {};
+    const classes = {};
+    // Run 6 times to find nested namespaces and classes
+    for (let i = 0; i < 6; i++) {
+        // Split into namespaces and classes
+        api.forEach((entry, index) => {
+            const result = splitNamespacesAndClasses(entry, namespaces, classes);
+            if (result === true) {
+                // console.log('Run #', i, 'Moving', entry.name);
+                api.splice(index, 1);
+            }
+        });
+    }
     // Look through base entries
     api.forEach((entry) => {
-        if (typeof entry.name === 'string' && entry.name.includes('.')) {
-            const namePieces = entry.name.split('.');
-            const entryNamespace = namePieces[0];
-            const entryName = namePieces[1];
-            // Create namespace if not already exists
-            namespaces[entryNamespace] = namespaces[entryNamespace] || [];
-            // Update entry name and add to the namespace
-            entry.name = entryName;
-            namespaces[entryNamespace].push(entry);
-        }
-        else {
-            definitions += parseBasedOnType(entry, isExternalLuaModule, root, false);
-        }
+        definitions += parseBasedOnType(entry, isExternalLuaModule, root, false, false);
     });
     // Loop through namespaces we've found
     for (const namespace in namespaces) {
@@ -34,15 +34,59 @@ function parseAll(api, isExternalLuaModule, root) {
             definitions += `${getDeclarationKeyword(root)} namespace ${namespace} {\n`;
             // Loop through entries within the namespace
             namespaceEntries.forEach((entry) => {
-                definitions += parseBasedOnType(entry, isExternalLuaModule, false, false);
+                definitions += parseBasedOnType(entry, isExternalLuaModule, false, false, false);
+            });
+            definitions += '}\n';
+        }
+    }
+    for (const iclass in classes) {
+        if (Object.prototype.hasOwnProperty.call(classes, iclass)) {
+            const classEntries = classes[iclass];
+            // Alphabetize entries based on name
+            classEntries.sort(alphabetizeApi);
+            definitions += `${root ? 'declare ' : ''}class ${iclass} {\n`;
+            // Loop through entries within the namespace
+            classEntries.forEach((entry) => {
+                definitions += parseBasedOnType(entry, isExternalLuaModule, false, false, true);
             });
             definitions += '}\n';
         }
     }
     return definitions;
 }
+/**
+ * Push nested methods and properties into namespaces and classes
+ * @returns true if entry was moved
+ */
+function splitNamespacesAndClasses(entry, namespaces, classes) {
+    if (typeof entry.name === 'string') {
+        if (entry.name.includes('.')) {
+            const namePieces = entry.name.split('.');
+            const entryNamespace = namePieces.slice(0, -1).join('.');
+            const entryName = namePieces[namePieces.length - 1];
+            // Create namespace if not already exists
+            namespaces[entryNamespace] = namespaces[entryNamespace] || [];
+            // Update entry name and add to the namespace
+            entry.name = entryName;
+            namespaces[entryNamespace].push(entry);
+            return true;
+        }
+        else if (entry.name.includes(':')) {
+            const namePieces = entry.name.split(':');
+            const classNamespace = namePieces.slice(0, -1).join(':');
+            const className = namePieces[namePieces.length - 1];
+            // Create namespace if not already exists
+            classes[classNamespace] = classes[classNamespace] || [];
+            // Update entry name and add to the namespace
+            entry.name = className;
+            classes[classNamespace].push(entry);
+            return true;
+        }
+    }
+    return false;
+}
 /** Delegates parsing based on type */
-function parseBasedOnType(entry, isExternalLuaModule, root, isParam) {
+function parseBasedOnType(entry, isExternalLuaModule, root, isParam, isClass) {
     let definitions = '';
     if (typeof entry.type === 'string' &&
         TYPES_TO_SKIP.includes(entry.type.toUpperCase())) {
@@ -59,6 +103,13 @@ function parseBasedOnType(entry, isExternalLuaModule, root, isParam) {
     }
     else {
         definitions += parseGeneric(entry, root);
+    }
+    if (isClass) {
+        // Hacky way to remove export keywords for class definitions
+        definitions = definitions
+            .replace('export function ', '')
+            .replace('export const ', '')
+            .replace('export let ', '');
     }
     return definitions;
 }

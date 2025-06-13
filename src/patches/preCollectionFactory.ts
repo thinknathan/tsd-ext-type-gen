@@ -1,8 +1,15 @@
-export const preFactory = [
+export const preCollectionFactory = [
 	{
 		mode: 'replace',
-		name: 'factory',
+		name: 'collectionfactory',
 		members: [
+			{
+				name: 'create',
+				returns: {
+					type: 'LuaMap<hash, hash>',
+					useExactType: true,
+				},
+			},
 			{
 				name: 'load',
 				parameters: [

@@ -60,6 +60,7 @@ const INVALID_NAMES = [
 // All valid types are listed here
 const KNOWN_TYPES: { [key: string]: string } = {
 	ANY: 'any',
+	'...': 'any[]',
 	TBL: 'object',
 	TABLE: 'object',
 	TABEL: 'object', // intentional typo
@@ -108,8 +109,13 @@ const KNOWN_TYPES: { [key: string]: string } = {
 	// TO-DO: Handle `predicate` (render_script)
 	// TO-DO: Handle `b2World`
 	// TO-DO: Handle `b2BodyType`
-	b2Body: 'typeof b2d.body',
-	'...': 'any[]',
+	B2BODY: 'typeof b2d.body',
+	// Socket library
+	CLIENT: 'typeof socket.client',
+	CONNECTED: 'typeof socket.connected',
+	MASTER: 'typeof socket.master',
+	SERVER: 'typeof socket.server',
+	UNCONNECTED: 'typeof socket.unconnected',
 };
 
 const TYPES_TO_SKIP = ['MESSAGE', 'PROPERTY'];

@@ -55,6 +55,24 @@ export const prePhysics = [
                 ],
             },
             {
+                name: 'set_group',
+                parameters: [
+                    {
+                        name: 'group',
+                        type: 'hash | string',
+                    },
+                ],
+            },
+            {
+                name: 'set_maskbit',
+                parameters: [
+                    {
+                        name: 'group',
+                        type: 'hash | string',
+                    },
+                ],
+            },
+            {
                 name: 'raycast_async',
                 parameters: [
                     {

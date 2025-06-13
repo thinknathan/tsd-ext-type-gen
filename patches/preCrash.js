@@ -1,20 +1,22 @@
 export const preCrash = [
-// {
-// 	mode: 'replace',
-// 	name: 'crash',
-// 	members: [
-// 		{
-// 			name: 'get_backtrace',
-// 			returns: {
-// 				type: 'table',
-// 			},
-// 		},
-// 		{
-// 			name: 'get_modules',
-// 			returns: {
-// 				type: 'table',
-// 			},
-// 		},
-// 	],
-// },
+    {
+        mode: 'replace',
+        name: 'crash',
+        members: [
+            // TO-DO: This return type
+            // {
+            // 	name: 'get_backtrace',
+            // 	returns: {
+            // 		type: 'table',
+            // 	},
+            // },
+            {
+                name: 'get_modules',
+                returns: {
+                    type: '{ name: unknown; address: unknown }[]',
+                    useExactType: true,
+                },
+            },
+        ],
+    },
 ];

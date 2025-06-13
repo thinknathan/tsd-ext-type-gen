@@ -5,6 +5,7 @@ import { preTimer } from '../patches/preTimer.js';
 import { preTilemap } from '../patches/preTilemap.js';
 import { preSys } from '../patches/preSys.js';
 import { preSprite } from '../patches/preSprite.js';
+import { preSocket } from '../patches/preSocket.js';
 import { preSound } from '../patches/preSound.js';
 import { preBuiltins } from '../patches/preBuiltins.js';
 import { preResource } from '../patches/preResource.js';
@@ -13,39 +14,46 @@ import { preProfiler } from '../patches/preProfiler.js';
 import { prePhysics } from '../patches/prePhysics.js';
 import { preParticleFx } from '../patches/preParticleFx.js';
 import { preModel } from '../patches/preModel.js';
+import { preMsg } from '../patches/preMsg.js';
 import { preLiveUpdate } from '../patches/preLiveUpdate.js';
 import { preJson } from '../patches/preJson.js';
 import { preImage } from '../patches/preImage.js';
 import { preHttp } from '../patches/preHttp.js';
+import { preGraphics } from '../patches/preGraphics.js';
+import { preGui } from '../patches/preGui.js';
+import { preGo } from '../patches/preGo.js';
 import { preFactory } from '../patches/preFactory.js';
 import { preCrash } from '../patches/preCrash.js';
+import { preCollectionProxy } from '../patches/preCollectionProxy.js';
+import { preCollectionFactory } from '../patches/preCollectionFactory.js';
+import { preCamera } from '../patches/preCamera.js';
+import { preBuffer } from '../patches/preBuffer.js';
+import { preB2d } from '../patches/preB2d.js';
 
 const prePatches: PatchSchema = {
-	'b2d.body': [],
-	b2d: [],
-	buffer: [],
+	b2d: preB2d,
+	buffer: preBuffer,
 	builtins: preBuiltins,
-	camera: [],
-	collectionfactory: [],
-	collectionproxy: [],
+	camera: preCamera,
+	collectionfactory: preCollectionFactory,
+	collectionproxy: preCollectionProxy,
 	crash: preCrash,
 	factory: preFactory,
-	go: [],
-	// graphics: [],
-	gui: [],
-	// html5: [],
+	go: preGo,
+	graphics: preGraphics,
+	gui: preGui,
 	http: preHttp,
 	image: preImage,
 	json: preJson,
-	// label: [],
 	liveupdate: preLiveUpdate,
 	model: preModel,
-	// msg: [],
+	msg: preMsg,
 	particlefx: preParticleFx,
 	physics: prePhysics,
 	profiler: preProfiler,
 	render: preRender,
 	resource: preResource,
+	socket: preSocket,
 	sound: preSound,
 	sprite: preSprite,
 	sys: preSys,
@@ -54,7 +62,6 @@ const prePatches: PatchSchema = {
 	types: preTypes,
 	vmath: preVmath,
 	window: preWindow,
-	// zlib: [],
 };
 
 function recursiveMerge(

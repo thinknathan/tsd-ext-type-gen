@@ -1,27 +1,4 @@
 export const preSound = [
-    // TO-DO: should these properties be in the namespace?
-    // {
-    // 	mode: 'add',
-    // 	name: 'sound',
-    // 	members: [
-    // 		{
-    // 			name: 'gain',
-    // 			type: 'number',
-    // 		},
-    // 		{
-    // 			name: 'pan',
-    // 			type: 'number',
-    // 		},
-    // 		{
-    // 			name: 'speed',
-    // 			type: 'number',
-    // 		},
-    // 		{
-    // 			name: 'sound',
-    // 			type: 'hash',
-    // 		},
-    // 	],
-    // },
     {
         mode: 'replace',
         name: 'sound',

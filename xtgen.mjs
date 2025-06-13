@@ -200,7 +200,8 @@ async function extractApiFromDefoldGlobal(channel, outDir) {
 					!entry.name.startsWith('dmsdk') &&
 					!entry.name.startsWith('engine') &&
 					!entry.name.startsWith('editor') &&
-					!entry.name.startsWith('lua') &&
+					// Excludes standard Lua libraries, but includes luasocket
+					!entry.name.startsWith('lua_') &&
 					!entry.name.startsWith('proto'),
 			)
 			// Parse the JSON files
@@ -224,10 +225,12 @@ async function extractApiFromDefoldGlobal(channel, outDir) {
 							apis[namespace] = apis[namespace].concat(equivalentApi);
 						}
 					} else {
+						// Remove periods from namespace name
+						const displayName = namespace.split('.')[0];
 						// Create a fake table for the members to belong to
 						const equivalentApi = [
 							{
-								name: namespace,
+								name: displayName,
 								type: 'table',
 								members: api.elements.map(jsonToScriptApiEquivalent),
 							},
@@ -236,7 +239,7 @@ async function extractApiFromDefoldGlobal(channel, outDir) {
 							apis[namespace] = equivalentApi;
 						} else {
 							// Merge members of duplicate namespaces
-							const newMembers = equivalentApi[0].members;
+							const newMembers = equivalentApi[0].members ?? [];
 							apis[namespace][0].members =
 								apis[namespace][0].members.concat(newMembers);
 						}
@@ -276,9 +279,9 @@ function jsonToScriptApiEquivalent(obj) {
 		}
 	}
 	if (obj.name) {
-		// If name has a period, remove everything before the first period
-		// Repeat as needed
-		while (obj.name.indexOf('.') !== -1) {
+		// Remove everything before the first period
+		// Multiple periods may still be present
+		if (obj.name.indexOf('.') !== -1) {
 			obj.name = obj.name.substring(obj.name.indexOf('.') + 1);
 		}
 	}
@@ -344,6 +347,7 @@ function jsonToScriptApiEquivalent(obj) {
 /** Parse API and generate TypeScript definitions, then write them to disk */
 async function outputDefinitions(apis, outDir, dep, details) {
 	let globalCombinedApi = `${HEADER}${HEADER_GLOBAL}\n// Defold v${details.version ?? ''} (${details.sha ?? ''})\n\n`;
+	const globalApis = [];
 	for (const key in apis) {
 		if (Object.prototype.hasOwnProperty.call(apis, key)) {
 			// Set name according to key
@@ -380,7 +384,11 @@ async function outputDefinitions(apis, outDir, dep, details) {
 			const result = parseAll(api, details.isExternalLuaModule, true);
 			if (result) {
 				if (details.isGlobalDefApi) {
-					globalCombinedApi += result;
+					globalApis.push({
+						// Use name from details
+						name: details.name,
+						content: result,
+					});
 				} else {
 					// Guess the source URL by including only the first 6 strings split by slash
 					const depUrl = dep.split('/').slice(0, 5).join('/');
@@ -401,6 +409,14 @@ async function outputDefinitions(apis, outDir, dep, details) {
 		}
 	}
 	if (details.isGlobalDefApi) {
+		// Alphabetize the global API by name
+		// Move `builtins` to the front of the array
+		globalApis
+			.sort((a, b) => a.name.localeCompare(b.name))
+			.sort((x) => (x.name === 'builtins' ? -1 : 0));
+		globalApis.forEach((api) => {
+			globalCombinedApi += api.content + '\n\n';
+		});
 		// Save the definitions to file
 		try {
 			await fs.promises.writeFile(

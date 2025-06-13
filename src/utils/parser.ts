@@ -27,23 +27,29 @@ function parseAll(
 ): string {
 	let definitions = '';
 	const namespaces: { [key: string]: ScriptApi } = {};
+	const classes: { [key: string]: ScriptApi } = {};
+
+	// Run 6 times to find nested namespaces and classes
+	for (let i = 0; i < 6; i++) {
+		// Split into namespaces and classes
+		api.forEach((entry, index) => {
+			const result = splitNamespacesAndClasses(entry, namespaces, classes);
+			if (result === true) {
+				// console.log('Run #', i, 'Moving', entry.name);
+				api.splice(index, 1);
+			}
+		});
+	}
 
 	// Look through base entries
 	api.forEach((entry) => {
-		if (typeof entry.name === 'string' && entry.name.includes('.')) {
-			const namePieces = entry.name.split('.');
-			const entryNamespace = namePieces[0];
-			const entryName = namePieces[1];
-
-			// Create namespace if not already exists
-			namespaces[entryNamespace] = namespaces[entryNamespace] || [];
-
-			// Update entry name and add to the namespace
-			entry.name = entryName;
-			namespaces[entryNamespace].push(entry);
-		} else {
-			definitions += parseBasedOnType(entry, isExternalLuaModule, root, false);
-		}
+		definitions += parseBasedOnType(
+			entry,
+			isExternalLuaModule,
+			root,
+			false,
+			false,
+		);
 	});
 
 	// Loop through namespaces we've found
@@ -63,6 +69,30 @@ function parseAll(
 					isExternalLuaModule,
 					false,
 					false,
+					false,
+				);
+			});
+			definitions += '}\n';
+		}
+	}
+
+	for (const iclass in classes) {
+		if (Object.prototype.hasOwnProperty.call(classes, iclass)) {
+			const classEntries = classes[iclass];
+
+			// Alphabetize entries based on name
+			classEntries.sort(alphabetizeApi);
+
+			definitions += `${root ? 'declare ' : ''}class ${iclass} {\n`;
+
+			// Loop through entries within the namespace
+			classEntries.forEach((entry) => {
+				definitions += parseBasedOnType(
+					entry,
+					isExternalLuaModule,
+					false,
+					false,
+					true,
 				);
 			});
 			definitions += '}\n';
@@ -72,12 +102,52 @@ function parseAll(
 	return definitions;
 }
 
+/**
+ * Push nested methods and properties into namespaces and classes
+ * @returns true if entry was moved
+ */
+function splitNamespacesAndClasses(
+	entry: ScriptApiEntry | ScriptApiTable | ScriptApiFunction,
+	namespaces: { [key: string]: ScriptApi },
+	classes: { [key: string]: ScriptApi },
+) {
+	if (typeof entry.name === 'string') {
+		if (entry.name.includes('.')) {
+			const namePieces = entry.name.split('.');
+			const entryNamespace = namePieces.slice(0, -1).join('.');
+			const entryName = namePieces[namePieces.length - 1];
+
+			// Create namespace if not already exists
+			namespaces[entryNamespace] = namespaces[entryNamespace] || [];
+
+			// Update entry name and add to the namespace
+			entry.name = entryName;
+			namespaces[entryNamespace].push(entry);
+			return true;
+		} else if (entry.name.includes(':')) {
+			const namePieces = entry.name.split(':');
+			const classNamespace = namePieces.slice(0, -1).join(':');
+			const className = namePieces[namePieces.length - 1];
+
+			// Create namespace if not already exists
+			classes[classNamespace] = classes[classNamespace] || [];
+
+			// Update entry name and add to the namespace
+			entry.name = className;
+			classes[classNamespace].push(entry);
+			return true;
+		}
+	}
+	return false;
+}
+
 /** Delegates parsing based on type */
 function parseBasedOnType(
 	entry: ScriptApiEntry | ScriptApiTable | ScriptApiFunction,
 	isExternalLuaModule: boolean,
 	root: boolean,
 	isParam: boolean,
+	isClass: boolean,
 ) {
 	let definitions = '';
 	if (
@@ -93,6 +163,13 @@ function parseBasedOnType(
 		definitions += parseFunction(entry, isParam, root);
 	} else {
 		definitions += parseGeneric(entry, root);
+	}
+	if (isClass) {
+		// Hacky way to remove export keywords for class definitions
+		definitions = definitions
+			.replace('export function ', '')
+			.replace('export const ', '')
+			.replace('export let ', '');
 	}
 	return definitions;
 }
