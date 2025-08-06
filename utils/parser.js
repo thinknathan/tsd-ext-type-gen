@@ -92,6 +92,9 @@ function parseBasedOnType(entry, isExternalLuaModule, root, isParam, isClass) {
         TYPES_TO_SKIP.includes(entry.type.toUpperCase())) {
         // Skip
     }
+    else if (entry.type === 'TYPEDEF') {
+        // TO-DO: Handle official type defs from the API
+    }
     else if (isTypeDef(entry)) {
         definitions += parseTypeDefinition(entry, root);
     }
@@ -126,9 +129,13 @@ function parseTypeDefinition(entry, root) {
 }
 /** Generates TypeScript definitions for ScriptApiTable */
 function parseTable(entry, isExternalLuaModule, root, isReturn) {
+    // Weird workaround for bug in Defold v1.10.4
+    const DEFAULT_NAME_IF_BLANK_MODIFIED = root && isExternalLuaModule === false ? 'font' : DEFAULT_NAME_IF_BLANK;
     const declaration = getDeclarationKeyword(root);
     const override = entry.name ? getExportOverride(entry.name, false) : '';
-    const name = entry.name ? getName(entry.name, false) : DEFAULT_NAME_IF_BLANK;
+    const name = entry.name
+        ? getName(entry.name, false)
+        : DEFAULT_NAME_IF_BLANK_MODIFIED;
     let tableDeclaration = `${declaration} namespace ${name} {\n`;
     if (root) {
         tableDeclaration = isExternalLuaModule

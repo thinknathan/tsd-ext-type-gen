@@ -155,6 +155,8 @@ function parseBasedOnType(
 		TYPES_TO_SKIP.includes(entry.type.toUpperCase())
 	) {
 		// Skip
+	} else if (entry.type === 'TYPEDEF') {
+		// TO-DO: Handle official type defs from the API
 	} else if (isTypeDef(entry)) {
 		definitions += parseTypeDefinition(entry, root);
 	} else if (isApiTable(entry)) {
@@ -193,9 +195,15 @@ function parseTable(
 	root: boolean,
 	isReturn?: boolean,
 ): string {
+	// Weird workaround for bug in Defold v1.10.4
+	const DEFAULT_NAME_IF_BLANK_MODIFIED =
+		root && isExternalLuaModule === false ? 'font' : DEFAULT_NAME_IF_BLANK;
+
 	const declaration = getDeclarationKeyword(root);
 	const override = entry.name ? getExportOverride(entry.name, false) : '';
-	const name = entry.name ? getName(entry.name, false) : DEFAULT_NAME_IF_BLANK;
+	const name = entry.name
+		? getName(entry.name, false)
+		: DEFAULT_NAME_IF_BLANK_MODIFIED;
 
 	let tableDeclaration = `${declaration} namespace ${name} {\n`;
 	if (root) {
