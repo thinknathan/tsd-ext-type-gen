@@ -298,6 +298,7 @@ async function extractApiFromDefoldGlobal(channel: string, outDir: string) {
 			isGlobalDefApi: true,
 			version: tag,
 			sha: info.sha1,
+			channel,
 		},
 	);
 }
@@ -404,9 +405,10 @@ async function outputDefinitions(
 		isGlobalDefApi: boolean;
 		version?: string;
 		sha?: string;
+		channel?: string;
 	},
 ) {
-	let globalCombinedApi = `${HEADER}${HEADER_GLOBAL}\n// Defold v${details.version ?? ''} (${details.sha ?? ''})\n\n`;
+	let globalCombinedApi = `${HEADER}${HEADER_GLOBAL}\n// DEFOLD. ${details.channel ?? ''} version ${details.version ?? ''} (${details.sha ?? ''})\n\n`;
 	const globalApis: { name: string; content: string }[] = [];
 	for (const key in apis) {
 		if (Object.prototype.hasOwnProperty.call(apis, key)) {

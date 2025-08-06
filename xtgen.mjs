@@ -260,6 +260,7 @@ async function extractApiFromDefoldGlobal(channel, outDir) {
 			isGlobalDefApi: true,
 			version: tag,
 			sha: info.sha1,
+			channel,
 		},
 	);
 }
@@ -346,7 +347,7 @@ function jsonToScriptApiEquivalent(obj) {
 }
 /** Parse API and generate TypeScript definitions, then write them to disk */
 async function outputDefinitions(apis, outDir, dep, details) {
-	let globalCombinedApi = `${HEADER}${HEADER_GLOBAL}\n// Defold v${details.version ?? ''} (${details.sha ?? ''})\n\n`;
+	let globalCombinedApi = `${HEADER}${HEADER_GLOBAL}\n// DEFOLD. ${details.channel ?? ''} version ${details.version ?? ''} (${details.sha ?? ''})\n\n`;
 	const globalApis = [];
 	for (const key in apis) {
 		if (Object.prototype.hasOwnProperty.call(apis, key)) {
