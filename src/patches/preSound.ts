@@ -43,6 +43,18 @@ export const preSound = [
 								// @ts-expect-error update type
 								optional: true,
 							},
+							{
+								name: 'start_time',
+								type: 'number',
+								// @ts-expect-error update type
+								optional: true,
+							},
+							{
+								name: 'start_frame',
+								type: 'number',
+								// @ts-expect-error update type
+								optional: true,
+							},
 						],
 					},
 					{
