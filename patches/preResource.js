@@ -93,9 +93,15 @@ export const preResource = [
                             },
                         ],
                     },
+                    // {
+                    // 	name: 'buffer',
+                    // 	optional: true,
+                    // },
                     {
-                        name: 'buffer',
+                        name: 'callback',
                         optional: true,
+                        type: '(this: any, request_id: number, resource: hash) => void',
+                        useExactType: true,
                     },
                 ],
                 returns: {

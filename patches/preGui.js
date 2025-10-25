@@ -117,6 +117,13 @@ export const preGui = [
                     useExactType: true,
                 },
             },
+            {
+                name: 'get_layouts',
+                returns: {
+                    type: 'LuaMap<hash, vmath.vector3>',
+                    useExactType: true,
+                },
+            },
         ],
     },
 ];
