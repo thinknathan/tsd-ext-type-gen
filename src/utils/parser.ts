@@ -195,15 +195,9 @@ function parseTable(
 	root: boolean,
 	isReturn?: boolean,
 ): string {
-	// Weird workaround for bug in Defold v1.10.4
-	const DEFAULT_NAME_IF_BLANK_MODIFIED =
-		root && isExternalLuaModule === false ? 'font' : DEFAULT_NAME_IF_BLANK;
-
 	const declaration = getDeclarationKeyword(root);
 	const override = entry.name ? getExportOverride(entry.name, false) : '';
-	const name = entry.name
-		? getName(entry.name, false)
-		: DEFAULT_NAME_IF_BLANK_MODIFIED;
+	const name = entry.name ? getName(entry.name, false) : DEFAULT_NAME_IF_BLANK;
 
 	let tableDeclaration = `${declaration} namespace ${name} {\n`;
 	if (root) {
