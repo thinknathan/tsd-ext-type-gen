@@ -37,6 +37,7 @@ export const preResource = [
 												height: number;
 												pivot_x: number;
 												pivot_y: number;
+												rotated: boolean;
 												vertices: number[] | LuaSet<number>;
 												uvs: number[] | LuaSet<number>;
 												indices: number[] | LuaSet<number>;
