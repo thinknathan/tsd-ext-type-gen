@@ -144,6 +144,258 @@ export const preVmath = [
 		w: number;
 	}`,
 			},
+			/**
+			 * Add input/output type pairs as additional
+			 * override redefinitions
+			 */
+			{
+				name: 'normalize',
+				type: 'function',
+				noComment: true,
+				parameters: [
+					{
+						name: 'v1',
+						type: 'vmath.vector3',
+						useExactType: true,
+					},
+				],
+				returns: {
+					type: 'vmath.vector3',
+					useExactType: true,
+				},
+			},
+			{
+				name: 'normalize',
+				type: 'function',
+				noComment: true,
+				parameters: [
+					{
+						name: 'v1',
+						type: 'vmath.vector4',
+						useExactType: true,
+					},
+				],
+				returns: {
+					type: 'vmath.vector4',
+					useExactType: true,
+				},
+			},
+			{
+				name: 'normalize',
+				type: 'function',
+				noComment: true,
+				parameters: [
+					{
+						name: 'v1',
+						type: 'vmath.quaternion',
+						useExactType: true,
+					},
+				],
+				returns: {
+					type: 'vmath.quaternion',
+					useExactType: true,
+				},
+			},
+			{
+				name: 'normalize',
+				type: 'function',
+				noComment: true,
+				parameters: [
+					{
+						name: 'v1',
+						type: 'vmath.vector',
+						useExactType: true,
+					},
+				],
+				returns: {
+					type: 'vmath.vector',
+					useExactType: true,
+				},
+			},
+			/**
+			 * Add input/output type pairs as additional
+			 * override redefinitions
+			 */
+			{
+				name: 'mul_per_elem',
+				type: 'function',
+				noComment: true,
+				parameters: [
+					{
+						name: 'v1',
+						type: 'vmath.vector3',
+						useExactType: true,
+					},
+					{
+						name: 'v2',
+						type: 'vmath.vector3',
+						useExactType: true,
+					},
+				],
+				returns: {
+					type: 'vmath.vector3',
+					useExactType: true,
+				},
+			},
+			{
+				name: 'mul_per_elem',
+				type: 'function',
+				noComment: true,
+				parameters: [
+					{
+						name: 'v1',
+						type: 'vmath.vector4',
+						useExactType: true,
+					},
+					{
+						name: 'v2',
+						type: 'vmath.vector4',
+						useExactType: true,
+					},
+				],
+				returns: {
+					type: 'vmath.vector4',
+					useExactType: true,
+				},
+			},
+			/**
+			 * Add input/output type pairs as additional
+			 * override redefinitions
+			 */
+			{
+				name: 'clamp',
+				type: 'function',
+				noComment: true,
+				parameters: [
+					{
+						name: 'value',
+						type: 'number',
+						useExactType: true,
+					},
+					{
+						name: 'min',
+						type: 'number | vmath.vector3 | vmath.vector4',
+						useExactType: true,
+					},
+					{
+						name: 'max',
+						type: 'number | vmath.vector3 | vmath.vector4',
+						useExactType: true,
+					},
+				],
+				returns: {
+					type: 'number',
+					useExactType: true,
+				},
+			},
+			{
+				name: 'clamp',
+				type: 'function',
+				noComment: true,
+				parameters: [
+					{
+						name: 'value',
+						type: 'vmath.vector3',
+						useExactType: true,
+					},
+					{
+						name: 'min',
+						type: 'number | vmath.vector3 | vmath.vector4',
+						useExactType: true,
+					},
+					{
+						name: 'max',
+						type: 'number | vmath.vector3 | vmath.vector4',
+						useExactType: true,
+					},
+				],
+				returns: {
+					type: 'vmath.vector3',
+					useExactType: true,
+				},
+			},
+			{
+				name: 'clamp',
+				type: 'function',
+				noComment: true,
+				parameters: [
+					{
+						name: 'value',
+						type: 'vmath.vector4',
+						useExactType: true,
+					},
+					{
+						name: 'min',
+						type: 'number | vmath.vector3 | vmath.vector4',
+						useExactType: true,
+					},
+					{
+						name: 'max',
+						type: 'number | vmath.vector3 | vmath.vector4',
+						useExactType: true,
+					},
+				],
+				returns: {
+					type: 'vmath.vector4',
+					useExactType: true,
+				},
+			},
+			/**
+			 * Add input/output type pairs as additional
+			 * override redefinitions
+			 */
+			{
+				name: 'slerp',
+				type: 'function',
+				noComment: true,
+				parameters: [
+					{
+						name: 't',
+						type: 'number',
+						useExactType: true,
+					},
+					{
+						name: 'v1',
+						type: 'vmath.vector3',
+						useExactType: true,
+					},
+					{
+						name: 'v2',
+						type: 'vmath.vector3',
+						useExactType: true,
+					},
+				],
+				returns: {
+					type: 'vmath.vector3',
+					useExactType: true,
+				},
+			},
+			{
+				name: 'slerp',
+				type: 'function',
+				noComment: true,
+				parameters: [
+					{
+						name: 't',
+						type: 'number',
+						useExactType: true,
+					},
+					{
+						name: 'v1',
+						type: 'vmath.vector4',
+						useExactType: true,
+					},
+					{
+						name: 'v2',
+						type: 'vmath.vector4',
+						useExactType: true,
+					},
+				],
+				returns: {
+					type: 'vmath.vector4',
+					useExactType: true,
+				},
+			},
 		],
 	},
 ] satisfies PatchEntry[];
