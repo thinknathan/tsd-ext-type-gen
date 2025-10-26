@@ -56,6 +56,7 @@ declare interface ScriptApiTable extends ScriptApiEntry {
 }
 
 declare interface ScriptApiFunction extends ScriptApiEntry {
+	noComment?: boolean; // Only used in custom patches
 	parameters?: ScriptApiParameter[];
 	return?: ScriptApiEntry | ScriptApiEntry[]; // This is a typo, but some people use it
 	returns?: ScriptApiEntry | ScriptApiEntry[];
