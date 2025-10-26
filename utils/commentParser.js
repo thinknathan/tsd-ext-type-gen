@@ -1,6 +1,9 @@
 import { getName, sanitizeForComment } from './utils.js';
 // Transforms and sanitizes descriptions
 function getComments(entry) {
+    if (entry.noComment) {
+        return '';
+    }
     const desc = entry.desc || entry.description;
     let newDesc = desc ?? '';
     // If params exist, let's create `@param`s in JSDoc format

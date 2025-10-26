@@ -2,6 +2,10 @@ import { getName, sanitizeForComment } from './utils.js';
 
 // Transforms and sanitizes descriptions
 function getComments(entry: ScriptApiFunction) {
+	if (entry.noComment) {
+		return '';
+	}
+
 	const desc = entry.desc || entry.description;
 	let newDesc = desc ?? '';
 
