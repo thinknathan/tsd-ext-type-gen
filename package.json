@@ -36,7 +36,7 @@
 		"@commitlint/config-conventional": "^19.2.2",
 		"@ts-defold/types": "^1.2.37",
 		"@types/adm-zip": "~0.5.5",
-		"@types/node": "~22",
+		"@types/node": "22.15.29",
 		"@types/yargs": "^17.0.32",
 		"@typescript-to-lua/language-extensions": "^1.19.0",
 		"eslint": "^9.0.0",
