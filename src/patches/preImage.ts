@@ -65,6 +65,20 @@ export const preImage = [
 					useExactType: true,
 				},
 			},
+			{
+				name: 'get_astc_header',
+				returns: {
+					type: `{
+						width: number;
+						height: number;
+						depth: number;
+						block_size_x: number;
+						block_size_y: number;
+						block_size_z: number;
+					} | undefined`,
+					useExactType: true,
+				},
+			},
 		],
 	},
 ] satisfies PatchEntry[];

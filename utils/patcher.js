@@ -22,6 +22,7 @@ import { preHttp } from '../patches/preHttp.js';
 import { preGraphics } from '../patches/preGraphics.js';
 import { preGui } from '../patches/preGui.js';
 import { preGo } from '../patches/preGo.js';
+import { preFont } from '../patches/preFont.js';
 import { preFactory } from '../patches/preFactory.js';
 import { preCrash } from '../patches/preCrash.js';
 import { preCollectionProxy } from '../patches/preCollectionProxy.js';
@@ -38,6 +39,7 @@ const prePatches = {
     collectionproxy: preCollectionProxy,
     crash: preCrash,
     factory: preFactory,
+    font: preFont,
     go: preGo,
     graphics: preGraphics,
     gui: preGui,
