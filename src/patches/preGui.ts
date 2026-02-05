@@ -14,6 +14,11 @@ export const preGui = [
 				typeDef: '(this: any) => void',
 			},
 			{
+				name: 'on_reload',
+				type: 'typeDef',
+				typeDef: '(this: any) => void',
+			},
+			{
 				name: 'update',
 				type: 'typeDef',
 				typeDef: '(this: any, dt: number) => void',

@@ -26,6 +26,24 @@ export const preWindow = [
 					},
 				],
 			},
+			{
+				name: 'get_safe_area',
+				returns: [
+					{
+						type: `{
+						x: number,
+						y: number,
+						width: number,
+						height: number,
+						inset_left: number,
+						inset_top: number,
+						inset_right: number,
+						inset_bottom: number,
+						}`,
+						useExactType: true,
+					},
+				],
+			},
 		],
 	},
 	{

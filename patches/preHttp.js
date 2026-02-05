@@ -44,6 +44,12 @@ export const preHttp = [
                                 // @ts-expect-error adding to narrow type
                                 optional: true,
                             },
+                            {
+                                name: 'proxy',
+                                type: 'string',
+                                // @ts-expect-error adding to narrow type
+                                optional: true,
+                            },
                         ],
                     },
                 ],
