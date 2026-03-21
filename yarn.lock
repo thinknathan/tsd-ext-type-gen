@@ -263,9 +263,9 @@
   integrity sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==
 
 "@ts-defold/types@^1.2.37":
-  version "1.2.77"
-  resolved "https://registry.yarnpkg.com/@ts-defold/types/-/types-1.2.77.tgz#24f0dd0126129e8a2b3a0f9227e087fe22105d64"
-  integrity sha512-AfBoEuWdvdgYIkzjU9LmuYPVd9nguFgba7pMMS2Vrrtz+Q6m7W6v846V2PGWJ5Q2MJb7eOdlnOrsFe1ImMpZ+w==
+  version "1.2.78"
+  resolved "https://registry.yarnpkg.com/@ts-defold/types/-/types-1.2.78.tgz#32c1d9d7f31e9e7907675b154f4e9786faa46397"
+  integrity sha512-ZnkAWuw3/gM/UspKxerMjOpVMjBB1bobYY1lPGHduuEV5zXgqrR2jjbogtuaQopZ6442Q/bvqjrLecK83ptW8w==
   dependencies:
     lua-types "^2.10.1"
 
