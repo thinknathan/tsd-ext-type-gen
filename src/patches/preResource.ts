@@ -20,8 +20,9 @@ export const preResource = [
 												id: string;
 												width: number;
 												height: number;
-												frame_start: number;
-												frame_end: number;
+												frame_start?: number;
+												frame_end?: number;
+												frames?: number[];
 												playback?: number;
 												fps?: number;
 												flip_vertical?: boolean;
@@ -307,10 +308,18 @@ export const preResource = [
 									{
 										name: 'frame_start',
 										type: 'number',
+										optional: true,
 									},
 									{
 										name: 'frame_end',
 										type: 'number',
+										optional: true,
+									},
+									{
+										name: 'frames',
+										type: 'number[]',
+										optional: true,
+										useExactType: true,
 									},
 									{
 										name: 'playback',
@@ -492,12 +501,9 @@ export const preResource = [
 										type: 'number',
 									},
 									{
-										name: 'frame_start',
-										type: 'number',
-									},
-									{
-										name: 'frame_end',
-										type: 'number',
+										name: 'frames',
+										type: 'number[]',
+										useExactType: true,
 									},
 									{
 										name: 'playback',
