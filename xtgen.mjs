@@ -200,6 +200,8 @@ async function extractApiFromDefoldGlobal(channel, outDir) {
 					!entry.name.startsWith('dmsdk') &&
 					!entry.name.startsWith('engine') &&
 					!entry.name.startsWith('editor') &&
+					// Excludes bit namespace
+					!entry.name.startsWith('src-script_bitop') &&
 					// Excludes standard Lua libraries, but includes luasocket
 					!entry.name.startsWith('lua_') &&
 					!entry.name.startsWith('proto'),
