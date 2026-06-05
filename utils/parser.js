@@ -28,9 +28,12 @@ function parseAll(api, isExternalLuaModule, root) {
     // Loop through namespaces we've found
     for (const namespace in namespaces) {
         if (Object.prototype.hasOwnProperty.call(namespaces, namespace)) {
-            const namespaceEntries = namespaces[namespace];
+            let namespaceEntries = namespaces[namespace];
             // Alphabetize entries based on name
             namespaceEntries.sort(alphabetizeApi);
+            if (namespace === 'body') {
+                namespaceEntries = b2dBodyHack(namespaceEntries);
+            }
             definitions += `${getDeclarationKeyword(root)} namespace ${namespace} {\n`;
             // Loop through entries within the namespace
             namespaceEntries.forEach((entry) => {
@@ -53,6 +56,16 @@ function parseAll(api, isExternalLuaModule, root) {
         }
     }
     return definitions;
+}
+/**
+ * Hack needed as of June 2026
+ * Defold API for b2d.body is broken: every property is doubled
+ * This function removes duplicate objects
+ */
+function b2dBodyHack(entries) {
+    const deDuped = entries.filter((item, pos, self) => pos ===
+        self.findIndex((p) => p.type === item.type && p.name === item.name && p.desc === item.desc));
+    return deDuped;
 }
 /**
  * Push nested methods and properties into namespaces and classes
