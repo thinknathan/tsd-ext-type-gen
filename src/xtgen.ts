@@ -277,10 +277,19 @@ async function extractApiFromDefoldGlobal(channel: string, outDir: string) {
 							apis[namespace] = equivalentApi;
 						} else {
 							// Merge members of duplicate namespaces
+							const existingMembers = (apis[namespace][0] as ScriptApiTable)
+								.members!;
 							const newMembers = equivalentApi[0].members ?? [];
-							(apis[namespace][0] as ScriptApiTable).members = (
-								apis[namespace][0] as ScriptApiTable
-							).members!.concat(newMembers);
+
+							// Both Box2d v2 and v3 are in the api. They use some of the same
+							// members so make sure to not duplicate them.
+							for (const newMember of newMembers) {
+								if (
+									!existingMembers.some((mem) => mem.name === newMember.name)
+								) {
+									existingMembers.push(newMember);
+								}
+							}
 						}
 					}
 				}
