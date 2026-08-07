@@ -247,7 +247,11 @@ async function extractApiFromDefoldGlobal(channel, outDir) {
 							// members so make sure to not duplicate them.
 							for (const newMember of newMembers) {
 								if (
-									!existingMembers.some((mem) => mem.name === newMember.name)
+									!existingMembers.some(
+										(mem) =>
+											mem.name === newMember.name &&
+											mem.type === newMember.type,
+									)
 								) {
 									existingMembers.push(newMember);
 								}
