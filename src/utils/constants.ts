@@ -109,9 +109,12 @@ const KNOWN_TYPES: { [key: string]: string } = {
 	TEXTURE: 'number',
 	CONSTANT_BUFFER: 'LuaUserdata', // TO-DO (render_script)
 	// TO-DO: Handle `predicate` (render_script)
-	// TO-DO: Handle `b2World`
 	// TO-DO: Handle `b2BodyType`
 	B2BODY: 'typeof b2d.body',
+	B2CHAIN: 'typeof b2d.chain',
+	B2JOINT: 'typeof b2d.joint',
+	B2SHAPE: 'typeof b2d.shape',
+	B2WORLD: 'typeof b2d.world',
 	// Socket library
 	CLIENT: 'typeof socket.client',
 	CONNECTED: 'typeof socket.connected',
